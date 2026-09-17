@@ -8,9 +8,36 @@ import json
 import os
 import pickle
 import sys
+import threading
 from pathlib import Path
 
 from .errors import StoriesError, require
+
+# Dashboard workers may cancel owned setup when their service stops.
+_job_context = threading.local()
+
+
+def _run_provider(coroutine, timeout):
+    async def supervise():
+        event = getattr(_job_context, "cancel", None)
+        if event is not None and event.is_set():
+            coroutine.close()
+            raise StoriesError("provider_cancelled", "Provider setup stopped with the viewer.")
+        task = asyncio.create_task(asyncio.wait_for(coroutine, timeout))
+        try:
+            while not task.done():
+                event = getattr(_job_context, "cancel", None)
+                if event is not None and event.is_set():
+                    raise StoriesError("provider_cancelled", "Provider setup stopped with the viewer.")
+                await asyncio.wait({task}, timeout=0.1)
+            return await task
+        finally:
+            if not task.done():
+                task.cancel()
+                await asyncio.gather(task, return_exceptions=True)
+
+    return asyncio.run(supervise())
+
 
 PROVIDERS = {
     "openai": "openai",
@@ -29,8 +56,8 @@ SETUP = {
     "openai": "Set OPENAI_API_KEY.",
     "anthropic": "Set ANTHROPIC_API_KEY.",
     "gemini": "Set GOOGLE_API_KEY or GEMINI_API_KEY; GOOGLE_API_KEY takes precedence.",
-    "copilot": "Authenticate gh with Copilot access, then export GH_TOKEN from gh auth token, or set COPILOT_AGENT_TOKEN.",
-    "chatgpt": "Complete Amplifier's explicit ChatGPT device login first. Stories uses its OAuth cache; it never prompts during work.",
+    "copilot": "Choose Sign in to use GitHub CLI authentication. An account with Copilot access and installed gh are required. Native Copilot/GitHub environment tokens are also supported.",
+    "chatgpt": "Choose Sign in to complete ChatGPT device authorization. Tokens stay in the provider OAuth cache.",
 }
 
 
@@ -85,10 +112,15 @@ def settings(config):
                 configured=bool(resolve_credential_detailed("openai-chatgpt").resolved),
                 source="provider OAuth cache",
             )
+        try:
+            _load_local_runtime(ProviderConfig(name, use_env=False))
+            row["runtime_ready"] = True
+        except StoriesError:
+            row["runtime_ready"] = False
         rows.append(row)
     return {
         "effective": config.public(),
-        "scope": "process and explicit per-operation snapshot",
+        "scope": "This running session only. Applies to future operations and feedback; queued work keeps its provider.",
         "providers": rows,
     }
 
@@ -185,7 +217,7 @@ def prepare_runtime(config):
         return {"status": "succeeded", "provider": config.provider, "runtime": "amplifier-agent"}
 
     try:
-        return asyncio.run(asyncio.wait_for(run(), 300))
+        return _run_provider(run(), 300)
     except StoriesError:
         raise
     except Exception as exc:
@@ -259,7 +291,7 @@ def test_provider(config, timeout_seconds):
             return {"status": "succeeded", **provenance}
 
     try:
-        return asyncio.run(asyncio.wait_for(run(), timeout_seconds))
+        return _run_provider(run(), timeout_seconds)
     except StoriesError:
         raise
     except Exception as exc:
@@ -267,4 +299,118 @@ def test_provider(config, timeout_seconds):
             "provider_test_failed",
             f"Connection test failed ({type(exc).__name__}).",
             "Check credentials, model access and provider availability. No fallback was used.",
+        ) from None
+
+
+def provider_models(config, timeout_seconds=60):
+    """Discover native model IDs without generating content or starting login."""
+    require(type(timeout_seconds) is int and 1 <= timeout_seconds <= 300, "Timeout must be 1–300 seconds.")
+
+    async def run():
+        bundle = await prepared(config)
+        session = await bundle.create_session()
+        async with session:
+            mounted = session.coordinator.get("providers")
+            require(bool(mounted), "Provider failed to mount.", "provider_unavailable")
+            provider = next(iter(mounted.values()))
+            models = await provider.list_models()
+            rows = []
+            for model in models:
+                data = model.model_dump() if hasattr(model, "model_dump") else model
+                if isinstance(data, dict) and isinstance(data.get("id"), str):
+                    rows.append({"id": data["id"], "name": data.get("display_name") or data["id"]})
+                elif isinstance(data, str):
+                    rows.append({"id": data, "name": data})
+            return {
+                "provider": config.provider,
+                "models": rows,
+                "default_model": getattr(provider, "default_model", None),
+                "notice": "Model listing does not guarantee account access or image/tool compatibility.",
+            }
+
+    try:
+        return _run_provider(run(), timeout_seconds)
+    except StoriesError:
+        raise
+    except Exception as exc:
+        raise StoriesError(
+            "provider_models_failed",
+            f"Model discovery failed ({type(exc).__name__}).",
+            "Check runtime preparation, credentials and provider availability.",
+        ) from None
+
+
+async def _login(config, timeout_seconds, progress):
+    if config.provider == "copilot":
+
+        async def gh(*args, stream=False):
+            proc = await asyncio.create_subprocess_exec(
+                "gh",
+                *args,
+                stdin=asyncio.subprocess.DEVNULL,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.STDOUT if stream else asyncio.subprocess.DEVNULL,
+                env={**os.environ, "GH_BROWSER": "echo"},
+            )
+            try:
+                if stream:
+                    async for line in proc.stdout:
+                        progress(line.decode(errors="replace").rstrip())
+                    return await proc.wait(), b""
+                output, _ = await proc.communicate()
+                return proc.returncode, output
+            finally:
+                if proc.returncode is None:
+                    proc.kill()
+                    await proc.wait()
+
+        code, token = await gh("auth", "token", "--hostname", "github.com")
+        if code:
+            progress("Complete GitHub device authorization using the URL and code below.")
+            code, _ = await gh("auth", "login", "--hostname", "github.com", "--web", stream=True)
+            require(code == 0, "GitHub sign-in did not complete.", "provider_login_failed")
+            code, token = await gh("auth", "token", "--hostname", "github.com")
+        require(
+            code == 0 and bool(token.strip()), "GitHub CLI has no token available.", "provider_login_failed"
+        )
+        os.environ["GH_TOKEN"] = token.decode().strip()
+        return {
+            "status": "succeeded",
+            "provider": "copilot",
+            "notice": "GitHub CLI owns the login. This session can use it; Copilot subscription access still needs a connection test.",
+        }
+    if config.provider != "chatgpt":
+        return {"status": "action_required", "provider": config.provider, "notice": SETUP[config.provider]}
+    from amplifier_agent_cli.provider_sources import PROVIDER_CATALOG, oauth_token_path
+    from amplifier_agent_lib import __version__
+    from amplifier_agent_lib.bundle.cache import load_and_prepare_cached
+
+    # Explicit setup may fetch modules, but must not mount an unauthenticated provider.
+    bundle = await load_and_prepare_cached(aaa_version=__version__)
+    entry = PROVIDER_CATALOG["openai-chatgpt"]
+    path = str((await bundle.resolver.async_resolve(entry["module"], source_hint=entry["source"])).resolve())
+    if path not in sys.path:
+        sys.path.insert(0, path)
+    oauth = importlib.import_module("amplifier_module_provider_openai_chatgpt.oauth")
+    await oauth.login(token_file_path=str(oauth_token_path()), print_fn=progress)
+    return {
+        "status": "succeeded",
+        "provider": "chatgpt",
+        "notice": "Login saved in the provider OAuth cache.",
+    }
+
+
+def provider_login(config, timeout_seconds=300, on_progress=None):
+    require(type(timeout_seconds) is int and 1 <= timeout_seconds <= 600, "Timeout must be 1–600 seconds.")
+    try:
+        return _run_provider(
+            _login(config, timeout_seconds, on_progress or (lambda _: None)), timeout_seconds
+        )
+    except StoriesError:
+        raise
+    except Exception as exc:
+        raise StoriesError(
+            "provider_login_failed",
+            f"Sign-in did not complete ({type(exc).__name__}).",
+            SETUP[config.provider],
         ) from None

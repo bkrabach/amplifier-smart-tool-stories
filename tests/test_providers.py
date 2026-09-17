@@ -166,3 +166,157 @@ def test_native_submission_uses_schema_and_rejects_missing_submission():
     with pytest.raises(StoriesError) as exc:
         asyncio.run(complete(p, ProviderConfig("openai"), [], 100, 10, schema=REVIEW))
     assert exc.value.code == "invalid_model_result"
+
+
+def test_apply_changes_future_feedback_only_and_keeps_authority(tmp_path, monkeypatch):
+    monkeypatch.setenv("STORIES_MODEL", "ambient-model")
+    api = Stories(tmp_path, provider="openai", model="original")
+    r = api.create_story("Test", "<html><body><p>Text</p></body></html>", "s")
+    api.grant_feedback(r["story_id"], {"max_operations": 3}, "grant")
+    old = api.add_comment(r["story_id"], r["revision_id"], "Old", "old")
+    grant = api.get_story(r["story_id"])["feedback_grant"].copy()
+    api.configure_provider("anthropic")
+    assert api.config.model is None  # Clearing model must not restore another provider's env model.
+    new = api.add_comment(r["story_id"], r["revision_id"], "New", "new")
+    assert api.get_operation(old["operation_id"])["provider"] == {"provider": "openai", "model": "original"}
+    assert api.get_operation(new["operation_id"])["provider"] == {"provider": "anthropic", "model": None}
+    after = api.get_story(r["story_id"])["feedback_grant"]
+    assert after == {**grant, "used": grant["used"] + 1}
+    fresh = Stories(tmp_path, provider="gemini")
+    assert not fresh._feedback_provider_override
+
+
+def test_login_and_discovery_require_access_without_starting(tmp_path, monkeypatch):
+    api = Stories(tmp_path)
+    for method in (api.provider_login, api.provider_models):
+        with pytest.raises(StoriesError) as exc:
+            method(provider="chatgpt")
+        assert exc.value.code == "model_access_required"
+
+
+def test_discovery_uses_selected_prepared_provider(monkeypatch):
+    from amplifier_smart_tool_stories import providers
+
+    class Provider:
+        default_model = "chosen"
+
+        async def list_models(self):
+            return [{"id": "chosen", "display_name": "Chosen", "secret": "omit"}]
+
+    class Session:
+        coordinator = {"providers": {"p": Provider()}}
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *args):
+            pass
+
+    class Bundle:
+        async def create_session(self):
+            return Session()
+
+    async def prepared(config):
+        assert config.provider == "gemini"
+        return Bundle()
+
+    monkeypatch.setattr(providers, "prepared", prepared)
+    result = providers.provider_models(ProviderConfig("gemini"))
+    assert result["models"] == [{"id": "chosen", "name": "Chosen"}]
+    assert result["default_model"] == "chosen"
+
+
+def test_owned_provider_job_cancellation_cleans_up(monkeypatch):
+    import asyncio
+    import threading
+
+    from amplifier_smart_tool_stories import providers
+
+    cancelled = threading.Event()
+    finished = []
+
+    async def work():
+        try:
+            cancelled.set()
+            await asyncio.sleep(10)
+        finally:
+            finished.append(True)
+
+    monkeypatch.setattr(providers._job_context, "cancel", cancelled, raising=False)
+    with pytest.raises(StoriesError) as exc:
+        providers._run_provider(work(), 20)
+    assert exc.value.code == "provider_cancelled"
+    assert finished == [True]
+
+
+def test_chatgpt_login_relays_device_instructions_without_mount(monkeypatch, tmp_path):
+    from types import SimpleNamespace
+
+    from amplifier_agent_cli import provider_sources
+    from amplifier_agent_lib.bundle import cache
+
+    from amplifier_smart_tool_stories import providers
+
+    instructions = []
+
+    async def login(*, token_file_path, print_fn):
+        assert token_file_path == str(tmp_path / "tokens.json")
+        print_fn("Open https://example.test/device and enter TEST-CODE")
+
+    async def resolve(*args, **kwargs):
+        return tmp_path
+
+    async def prepare(**kwargs):
+        return SimpleNamespace(resolver=SimpleNamespace(async_resolve=resolve))
+
+    monkeypatch.setattr(cache, "load_and_prepare_cached", prepare)
+    monkeypatch.setattr(provider_sources, "oauth_token_path", lambda: tmp_path / "tokens.json")
+    original = providers.importlib.import_module
+    monkeypatch.setattr(
+        providers.importlib,
+        "import_module",
+        lambda name: SimpleNamespace(login=login) if name.endswith(".oauth") else original(name),
+    )
+    result = providers.provider_login(ProviderConfig("chatgpt"), on_progress=instructions.append)
+    assert result["status"] == "succeeded"
+    assert instructions == ["Open https://example.test/device and enter TEST-CODE"]
+
+
+def test_copilot_login_uses_native_cache_and_never_reports_token(monkeypatch):
+    import asyncio
+
+    from amplifier_smart_tool_stories import providers
+
+    calls = []
+
+    class Process:
+        returncode = 0
+
+        async def communicate(self):
+            return b"private-github-token", b""
+
+    async def command(*args, **kwargs):
+        calls.append(args)
+        return Process()
+
+    monkeypatch.setattr(asyncio, "create_subprocess_exec", command)
+    monkeypatch.setenv("GH_TOKEN", "before")
+    result = providers.provider_login(ProviderConfig("copilot"))
+    assert calls == [("gh", "auth", "token", "--hostname", "github.com")]
+    assert providers.os.environ["GH_TOKEN"] == "private-github-token"
+    assert "private-github-token" not in json.dumps(result)
+
+
+def test_login_timeout_is_actionable(monkeypatch):
+    import asyncio
+
+    from amplifier_smart_tool_stories import providers
+
+    async def timeout(*args):
+        raise asyncio.TimeoutError()
+
+    monkeypatch.setattr(providers, "_login", timeout)
+    with pytest.raises(StoriesError) as exc:
+        providers.provider_login(ProviderConfig("chatgpt"), 1)
+    assert exc.value.code == "provider_login_failed"
+    assert "Sign in" in exc.value.public()["error"]["remedy"]

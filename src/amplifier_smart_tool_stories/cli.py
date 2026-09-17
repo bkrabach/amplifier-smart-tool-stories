@@ -64,6 +64,8 @@ def main():
             )
             method = getattr(api, name)
             inspect.signature(method).bind(**data)
+            if name == "provider_login":
+                data["on_progress"] = lambda text: print(text, file=sys.stderr, flush=True)
             result = method(**data)
             if args.execution == "in_process" and isinstance(result, dict) and result.get("operation_id"):
                 result = {**result, "operation": api.get_operation(result["operation_id"])}

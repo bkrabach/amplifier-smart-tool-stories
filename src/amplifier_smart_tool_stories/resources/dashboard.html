@@ -33,6 +33,7 @@
         ><button id="nextComment" aria-label="Next comment">›</button>
         <button id="documentOverall">Comment</button
         ><button id="documentDetails">Details</button
+        ><button id="documentSettings">Settings</button
         ><button id="documentOverlay">Hide review</button
         ><button id="hideTools" aria-label="Hide toolbar">×</button>
       </div>
@@ -41,7 +42,8 @@
       <span class="brand">Stories</span><span id="title"></span
       ><button id="agent" hidden>Agent highlights</button
       ><button id="overlay">Hide review</button
-      ><button id="more">Story details</button>
+      ><button id="more">Story details</button
+      ><button id="providerSettingsOpen">Settings</button>
     </header>
     <div id="hint">Select text or click an element to comment</div>
     <div id="previewNotice">
@@ -94,7 +96,60 @@
       <h3>Comments on this version</h3>
       <div id="threads"></div>
     </aside>
+    <dialog id="providerDialog" aria-labelledby="providerHeading">
+      <div class="row">
+        <h2 id="providerHeading">Provider settings</h2>
+        <button id="providerClose" aria-label="Close provider settings">
+          ×
+        </button>
+      </div>
+      <p class="settings-muted">
+        Choose the intelligence for future work in this session. Existing work
+        and drafts stay as they are.
+      </p>
+      <label for="providerChoice">Provider</label>
+      <select id="providerChoice">
+        <option value="anthropic">Anthropic</option>
+        <option value="openai">OpenAI</option>
+        <option value="gemini">Gemini</option>
+        <option value="chatgpt">ChatGPT</option>
+        <option value="copilot">GitHub Copilot</option>
+      </select>
+      <p id="providerStatus" class="settings-muted"></p>
+      <label for="providerModel">Model</label>
+      <input
+        id="providerModel"
+        list="providerModels"
+        placeholder="Provider default"
+        autocomplete="off"
+        maxlength="199"
+      />
+      <datalist id="providerModels"></datalist>
+      <div class="settings-actions">
+        <button id="providerDiscover">Discover models</button
+        ><button id="providerTest">Test connection</button>
+      </div>
+      <small class="settings-muted"
+        >A connection test sends one small model request. Model discovery does
+        not generate content.</small
+      >
+      <div class="settings-actions">
+        <button id="providerLogin">Sign in</button
+        ><button id="providerPrepare">Prepare runtime</button>
+      </div>
+      <p id="providerSetup" class="settings-muted"></p>
+      <pre id="providerResult" role="status" aria-live="polite"></pre>
+      <div class="settings-actions">
+        <button id="providerApply">Apply for this session</button
+        ><span id="providerApplied" class="settings-muted"></span>
+      </div>
+      <p class="settings-muted settings-footnote">
+        Credentials stay in the environment or provider-owned login cache.
+        Settings are not saved to the document or browser.
+      </p>
+    </dialog>
     <div id="error" role="alert" hidden></div>
     <script src="/app.js"></script>
+    <script src="/provider-settings.js"></script>
   </body>
 </html>

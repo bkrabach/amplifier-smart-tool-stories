@@ -86,6 +86,11 @@ or requiring a full document, spreadsheet or slide editor.
    supported. Tests that spend tokens are labeled; generation never unexpectedly
    launches authentication. Credentials and session access secrets do not enter
    generated artifacts, story records or ordinary browser settings storage.
+   The implemented settings scope is the current library instance/viewer process.
+   Applying a provider also applies to subsequently submitted authorized feedback,
+   without extending its grant or rerouting existing operations. Native sign-in,
+   runtime preparation, discovery and testing are explicit background actions; the
+   person can keep reading and saving drafts while they run.
 8. **Export delivers the chosen revision.** Download/export identifies the selected
    revision, actual format, artifact and current findings or limitations. An existing
    artifact can be downloaded without a model call. Creating a different format is

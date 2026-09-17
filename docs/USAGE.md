@@ -142,7 +142,7 @@ provider may still be billed. There is no automatic publication or caller wake-u
 - `needs_input` is a visible clarification outcome. Reply on the same target with
   the missing context to create a new operation; no implicit model continuation.
 - One local host and a private loopback viewer; no remote multi-user service.
-- Settings and login UI deferred. Library/CLI provider selection is implemented.
+- Provider settings are session-local. ChatGPT/Copilot account authorization requires the person to complete the provider’s sign-in flow.
 - macOS is the validated platform. Other platforms are not advertised yet.
 
 ## Live quality evaluation
@@ -206,3 +206,44 @@ because its renderer and available fonts differ. Inspect the exported target bef
 delivery: HTML model review is not advertised as Word visual review. Per-export
 visual checks are explicitly `not_performed`; the PDF also reports its mechanical
 checks. These are document exports, not general HTML-to-Office conversion.
+
+## Provider settings
+
+Open **Settings** in the presentation bar or document’s **View & comments** toolbar.
+Choose Anthropic, OpenAI, Gemini, ChatGPT or GitHub Copilot, then select a model or
+leave it blank for the provider default. **Apply for this session** changes future
+operations and authorized feedback submitted through this viewer. It does not change
+queued operations, renew feedback authority, or affect other callers. Closing and
+reopening Settings preserves the applied choice; restarting the viewer uses its
+launch configuration. Credentials and settings are never written to browser storage.
+
+**Discover models** queries the prepared provider without generation. The returned
+catalog does not guarantee account access or suitability for images and tools.
+**Test connection** sends one small model request to the chosen provider/model;
+it does not apply the selection. **Prepare runtime** explicitly downloads/installs
+provider modules and checks mounting without generating a story. Preparation status
+can become stale after runtime/cache changes; prepare again if instructed.
+
+API keys stay in the native environment. **Sign in** for ChatGPT displays provider
+instructions and uses its OAuth cache. Copilot uses an existing GitHub CLI login or
+starts its device flow; `gh` must be installed and the account needs Copilot access.
+GitHub CLI owns the login cache; the token is available in the running viewer only.
+Neither sign-in nor preparation happens implicitly during generation. Setup and
+checks run in the background; closing Settings does not cancel them. They time out
+or stop with the viewer. While setup is active, reading and draft saving continue;
+comment submission waits until it finishes. Setup is refused while story work is queued/running.
+
+The same capabilities are available before a story exists:
+
+```sh
+stories provider-settings
+stories --model-env provider-login --input '{"provider":"chatgpt"}'
+stories --model-env provider-login --input '{"provider":"copilot"}'
+stories --provider anthropic prepare-runtime
+stories --model-env provider-models --input '{"provider":"anthropic"}'
+stories --model-env --provider anthropic test-provider
+```
+
+`provider-login` relays device instructions to stderr and a JSON receipt to stdout.
+Library hosts can supply an `on_progress(text)` callback. Provider login/discovery and
+testing require `model_env`; merely reading or applying settings makes no network call.

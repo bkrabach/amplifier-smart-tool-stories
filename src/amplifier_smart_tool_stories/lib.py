@@ -29,6 +29,7 @@ class Stories:
         from .providers import ProviderConfig
 
         self.config = ProviderConfig(provider, model)
+        self._feedback_provider_override = False
         self.model_env = model_env
         require(execution in {"queued", "background", "in_process"}, "Unknown execution mode.")
         self.execution = execution
@@ -293,7 +294,9 @@ class Stories:
             "state": "queued",
             "created_at": now(),
             "grant": grant,
-            "provider": grant.get("provider", self.config.public()),
+            "provider": self.config.public()
+            if self._feedback_provider_override
+            else grant.get("provider", self.config.public()),
             "result": None,
             "error": None,
         }
@@ -645,10 +648,11 @@ class Stories:
         return settings(self.config)
 
     def configure_provider(self, provider, model=None):
-        """Set provider/model for future operations in this library instance only."""
+        """Set provider/model for future operations and authorized feedback in this instance; existing operations and grant limits stay fixed."""
         from .providers import ProviderConfig
 
-        self.config = ProviderConfig(provider, model)
+        self.config = ProviderConfig(provider, model, use_env=False)
+        self._feedback_provider_override = True
         return self.config.public()
 
     def prepare_runtime(self):
@@ -663,6 +667,22 @@ class Stories:
         from .providers import test_provider
 
         return test_provider(self.config, timeout_seconds)
+
+    def provider_models(self, provider=None, timeout_seconds=60):
+        """Discover provider model IDs without generation; model_env and prepared runtime required."""
+        require(self.model_env, "Enable model_env for provider discovery.", "model_access_required")
+        from .providers import ProviderConfig, provider_models
+
+        config = ProviderConfig(provider, use_env=False) if provider else self.config
+        return provider_models(config, timeout_seconds)
+
+    def provider_login(self, provider=None, timeout_seconds=300, on_progress=None):
+        """Explicit ChatGPT/Copilot sign-in or API-key setup guidance; native caches own credentials. May fetch runtime modules."""
+        require(self.model_env, "Enable model_env for provider login.", "model_access_required")
+        from .providers import ProviderConfig, provider_login
+
+        config = ProviderConfig(provider, use_env=False) if provider else self.config
+        return provider_login(config, timeout_seconds, on_progress)
 
     def start_dashboard(self, story_id, revision_id=None):
         """Start an authenticated loopback viewer for one story, without opening a browser."""
@@ -729,6 +749,8 @@ CAPABILITIES = [
     "configure_provider",
     "prepare_runtime",
     "test_provider",
+    "provider_models",
+    "provider_login",
     "start_dashboard",
     "stop_dashboard",
 ]

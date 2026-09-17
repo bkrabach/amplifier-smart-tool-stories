@@ -56,8 +56,7 @@ Providers: openai (OPENAI_API_KEY), anthropic (ANTHROPIC_API_KEY), gemini
 cache), copilot (COPILOT_AGENT_TOKEN, COPILOT_GITHUB_TOKEN, GH_TOKEN or GITHUB_TOKEN).
 Aliases openai-chatgpt and github-copilot are accepted. Stories does not perform
 interactive login during a call. For Copilot, use `gh auth login` and export a token
-from `gh auth token`; subscription/model access is required. For ChatGPT, complete
-Amplifier's native login first. `provider-settings` gives redacted readiness; it
+from `gh auth token`; subscription/model access is required. For ChatGPT, use `provider-login` or dashboard Sign in. `provider-settings` gives redacted readiness; it
 is not proof that the account can use a model. `test-provider` explicitly checks it.
 
 ## Calling it
@@ -65,8 +64,7 @@ is not proof that the account can use a model. `test-provider` explicitly checks
 Global options precede the capability: `--store PATH`, `--model-env`, `--provider NAME`,
 `--model ID`, `--execution queued|background|in_process`. Default execution is queued.
 Default provider is openai; STORIES_PROVIDER/STORIES_MODEL provide environment defaults.
-Settings affect future calls in this instance, never already-queued work. Settings UI
-and integrated login UI are deferred. Keys never belong in request JSON or retained state.
+Settings affect future calls and authorized feedback in this instance, never already-queued work. Dashboard Settings provides the same session-local selection, model discovery, connection test, explicit runtime preparation and native ChatGPT/Copilot sign-in. Keys never belong in request JSON or retained state.
 
 Every capability accepts `--input '{...}'`, `--input @file.json`, or `--input -`.
 File input loads the exact JSON content; HTML/source contents are explicit strings,
@@ -218,3 +216,18 @@ external skill checkout is a product dependency. Browser pagination is approxima
 Word line/page breaks vary with renderer/fonts. Export limitations and unperformed
 visual checks are explicit. Inspect the actual target before delivery, rather than
 assuming HTML review certifies another format. Annotations never enter exports.
+
+## Provider discovery and sign-in
+
+`provider-models(provider=None, timeout_seconds=60)` reads native model IDs from a
+prepared provider without generation. Catalog presence does not guarantee access or
+image/tool compatibility. `provider-login(provider=None, timeout_seconds=300)` starts
+explicit ChatGPT/Copilot login; API-key providers return setup guidance. Both require
+`--model-env`. Login may fetch runtime modules; device authorization remains with the
+person. CLI progress goes to stderr; library hosts may pass `on_progress(text)`.
+Credentials stay in native environment/provider caches, never story records.
+
+In Dashboard Settings, testing/discovery/login do not apply the selection. Apply
+changes future work in that session, preserving existing operations and grant limits.
+Setup runs asynchronously; close Settings to keep reading. Sending comments waits
+for setup to finish while drafts remain saved. Stop the viewer to cancel owned setup.

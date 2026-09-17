@@ -122,5 +122,67 @@ def test_dashboard_control_bindings_have_unique_elements():
     html = BeautifulSoup(resources.joinpath("dashboard.html").read_text(), "html.parser")
     ids = [n["id"] for n in html.select("[id]")]
     assert len(ids) == len(set(ids))
-    required = set(re.findall(r'\$\("([^"\n]+)"\)', resources.joinpath("dashboard.js").read_text()))
+    required = set(
+        re.findall(
+            r'\$\("([^"\n]+)"\)',
+            resources.joinpath("dashboard.js").read_text()
+            + resources.joinpath("provider-settings.js").read_text(),
+        )
+    )
     assert required <= set(ids), required - set(ids)
+
+
+def test_provider_settings_are_authenticated_session_only(server, monkeypatch):
+    s, r, _ = server
+    monkeypatch.setenv("ANTHROPIC_API_KEY", "private-provider-secret")
+    with pytest.raises(urllib.error.HTTPError):
+        post(s, "provider-settings", {}, token="invalid")
+    with post(s, "provider-settings", {}) as response:
+        data = json.load(response)
+    assert {p["name"] for p in data["providers"]} == {"anthropic", "openai", "gemini", "chatgpt", "copilot"}
+    assert "private-provider-secret" not in json.dumps(data)
+    before = s.api.get_story(r["story_id"])
+    with post(s, "configure-provider", {"provider": "gemini", "model": "test-model"}) as response:
+        assert json.load(response) == {"provider": "gemini", "model": "test-model"}
+    assert s.api.get_story(r["story_id"]) == before
+    with pytest.raises(urllib.error.HTTPError):
+        post(s, "start-provider-job", {"provider": "gemini", "kind": "test"})
+
+
+def test_provider_jobs_keep_dashboard_responsive_and_reject_overlap(server, monkeypatch):
+    import time
+
+    s, r, _ = server
+    s.api.model_env = True
+    entered, release = threading.Event(), threading.Event()
+
+    def test(api, timeout_seconds=60):
+        assert api.config.provider == "anthropic"
+        entered.set()
+        assert release.wait(5)
+        return {"status": "succeeded", "model": "test-model"}
+
+    monkeypatch.setattr(Stories, "test_provider", test)
+    try:
+        with post(s, "start-provider-job", {"kind": "test", "provider": "anthropic"}) as response:
+            assert json.load(response)["status"] == "running"
+        assert entered.wait(2)
+        with post(s, "get-story", {}) as response:
+            assert json.load(response)["id"] == r["story_id"]
+        for route, data in [
+            ("configure-provider", {"provider": "gemini"}),
+            ("start-provider-job", {"kind": "test", "provider": "openai"}),
+        ]:
+            with pytest.raises(urllib.error.HTTPError):
+                post(s, route, data)
+    finally:
+        release.set()
+    deadline = time.monotonic() + 3
+    while time.monotonic() < deadline:
+        with post(s, "provider-job", {}) as response:
+            job = json.load(response)
+        if job["status"] != "running":
+            break
+        time.sleep(0.02)
+    assert job["status"] == "succeeded"
+    assert s.api.config.provider == "openai"  # Testing is not applying.

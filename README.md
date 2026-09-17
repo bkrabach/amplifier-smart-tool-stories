@@ -36,7 +36,7 @@ Agent. The library, CLI and dashboard share retained state. Provider choices are
 OpenAI, ChatGPT, Copilot, Anthropic and Gemini; credentials and runtime preparation
 are explicit. Documents support continuous/paginated reading, zoom and a toolbar
 that appears when needed. PDF and editable Word exports are available with explicit
-layout limits. Provider settings UI, PowerPoint and spreadsheet work remain deferred.
+layout limits. Provider settings offer session-only selection, model discovery, connection tests and native sign-in. PowerPoint and spreadsheet work remain deferred.
 
 Generation uses packaged narrative/design guidance and native structured submissions.
 Every generated or revised artifact receives source-fidelity and static rendered-page

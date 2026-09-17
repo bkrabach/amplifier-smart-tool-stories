@@ -415,3 +415,77 @@ body.review-hidden #previewNotice {
 .document-review.review-hidden #documentOverall {
   display: none;
 }
+
+#providerDialog {
+  color-scheme: light;
+  width: min(500px, calc(100vw - 32px));
+  max-height: calc(100vh - 48px);
+  padding: 24px;
+  border: 1px solid #c8d1ca;
+  border-radius: 16px;
+  background: #fff;
+  color: #27362e;
+  box-shadow: 0 16px 70px #0004;
+  overflow: auto;
+}
+#providerDialog::backdrop {
+  background: #101c1840;
+}
+#providerDialog h2 {
+  margin: 0;
+  font-size: 20px;
+}
+#providerDialog label {
+  display: block;
+  margin: 16px 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+#providerDialog input,
+#providerDialog select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #b6c2bb;
+  border-radius: 8px;
+  background: white;
+  color: #27362e;
+  font: inherit;
+}
+#providerDialog button {
+  color: #315e49;
+  background: #f0f5f1;
+  border-color: #c8d5cc;
+  font-size: 13px;
+}
+#providerDialog button:hover {
+  background: #e3ede6;
+}
+#providerDialog #providerApply {
+  background: #315e49;
+  color: white;
+}
+#providerDialog .settings-muted {
+  color: #62766a;
+  font-size: 12px;
+  line-height: 1.55;
+}
+#providerDialog .settings-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 8px;
+}
+#providerResult {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 13px/1.5 system-ui;
+  max-height: 160px;
+  overflow: auto;
+}
+#providerResult:empty {
+  display: none;
+}
+#providerDialog .settings-footnote {
+  margin-bottom: 0;
+}
