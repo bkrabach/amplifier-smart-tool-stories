@@ -55,8 +55,9 @@ Providers: openai (OPENAI_API_KEY), anthropic (ANTHROPIC_API_KEY), gemini
 (GOOGLE_API_KEY or GEMINI_API_KEY), chatgpt (Amplifier's existing OAuth device-login
 cache), copilot (COPILOT_AGENT_TOKEN, COPILOT_GITHUB_TOKEN, GH_TOKEN or GITHUB_TOKEN).
 Aliases openai-chatgpt and github-copilot are accepted. Stories does not perform
-interactive login during a call. For Copilot, use `gh auth login` and export a token
-from `gh auth token`; subscription/model access is required. For ChatGPT, use `provider-login` or dashboard Sign in. `provider-settings` gives redacted readiness; it
+interactive login during a call. For Copilot, use `provider-login` or dashboard Sign in with installed GitHub CLI;
+subscription/model access is required. Sign-in supplies the current process with a
+token. For later CLI processes, export a token from `gh auth token` into GH_TOKEN. For ChatGPT, use `provider-login` or dashboard Sign in. `provider-settings` gives redacted readiness; it
 is not proof that the account can use a model. `test-provider` explicitly checks it.
 
 ## Calling it
@@ -64,7 +65,9 @@ is not proof that the account can use a model. `test-provider` explicitly checks
 Global options precede the capability: `--store PATH`, `--model-env`, `--provider NAME`,
 `--model ID`, `--execution queued|background|in_process`. Default execution is queued.
 Default provider is openai; STORIES_PROVIDER/STORIES_MODEL provide environment defaults.
-Settings affect future calls and authorized feedback in this instance, never already-queued work. Dashboard Settings provides the same session-local selection, model discovery, connection test, explicit runtime preparation and native ChatGPT/Copilot sign-in. Keys never belong in request JSON or retained state.
+Settings affect future calls and authorized feedback in this instance, never already-queued work.
+`configure-provider` is process-local: a CLI call does not save settings for the next
+CLI process. Pass --provider/--model on each invocation or set STORIES_PROVIDER/STORIES_MODEL. Dashboard Settings provides the same session-local selection, model discovery, connection test, explicit runtime preparation and native ChatGPT/Copilot sign-in. Keys never belong in request JSON or retained state.
 
 Every capability accepts `--input '{...}'`, `--input @file.json`, or `--input -`.
 File input loads the exact JSON content; HTML/source contents are explicit strings,
@@ -164,6 +167,9 @@ All exist as methods on Stories (hyphens become underscores):
 - `export`: write a named revision to a new output_path; format html (default), pdf or docx.
 - `get-export`: base64 bytes, MIME type, revision and source/output hashes, checks and limits.
   PDF/Word support structured documents only; no arbitrary HTML conversion.
+- `storytelling-capabilities`: provider-free writing approaches and upstream mapping.
+- `provider-models`: discover native model IDs; access and compatibility are not guaranteed.
+- `provider-login`: explicit ChatGPT/Copilot native sign-in or API-key setup guidance.
 - `provider-settings`: redacted effective settings and credential readiness.
 - `configure-provider`: process-local future settings; no credential storage or spending.
 - `prepare-runtime`: explicit dependency preparation, network/package/cache writes.

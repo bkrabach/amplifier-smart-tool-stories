@@ -3,6 +3,23 @@
 Read [the vision](docs/VISION.md) for product intent and [the contracts](contracts/)
 for caller-facing requirements and internal execution obligations.
 
+## Develop from this checkout
+
+```sh
+uv sync --extra dev
+uv run stories --help
+uv run stories manifest
+uv run pytest -q
+uv run ruff check src tests
+uv run ruff format --check src tests
+```
+
+Python 3.12+ and Pango are required for artifact/rendering tests (on macOS,
+`brew install pango`). No browser download or LibreOffice is required. The
+Amplifier Agent dependency tracks main; `uv.lock` records the tested development
+revision. Advance it deliberately with `uv lock --upgrade-package amplifier-agent`
+and validate compatibility. New Git installs resolve main.
+
 ## Code structure
 
 - Put the Python library in `src/amplifier_smart_tool_stories/`.
@@ -26,3 +43,51 @@ for caller-facing requirements and internal execution obligations.
 - Preserve upstream licenses and attribution when reusing code or assets.
 - Keep work items and their acceptance criteria in Work Tracker, not planning documents.
 - Keep this file to durable contributor guidance; do not add session status or deliberation.
+
+## Documentation ownership
+
+- README is for people: purpose, an agent-assisted quick start, review/export flow,
+  prerequisites and honest limits. Do not put checkout setup or API inventories there.
+- AGENTS.md is contributor guidance. Agent callers use installed `stories --help`
+  and subcommand help; `docs/USAGE.md` is the supporting caller guide.
+- Update packaged `SMART_TOOL.md`, `help.py`, usage documentation and affected
+  contracts together when public behavior changes. Top-level and subcommand help
+  must remain provider-free operating skills. Keep examples valid against public
+  signatures; callbacks are library-only.
+- Keep source classification, calculation verification, revision disclosures and
+  human acceptance distinct from semantic truth and model review. New revisions
+  do not inherit acceptance. Continuations retain question context and require
+  explicit bounded authority; retries must not repeat work.
+
+## Validation and delivery
+
+Build with `uv build --out-dir .work/dist`. Install the wheel in a separate test
+environment and exercise its CLI/library from outside the checkout. Verify packaged
+help, prompts and other resources without repository imports or developer state.
+
+Run `python <spec-checkout>/conformance/run.py <distribution-root>` using the
+Smart Tools conformance kit. `smart-tool.json` expects `.venv/bin/stories`; provide
+an installed environment at that location in the tested distribution. When the
+checkout contains ignored test installations with additional manifests, use an
+extracted source distribution so those copies do not pollute manifest discovery.
+Report failures and skips accurately. Conformance is not an output-quality test.
+
+Live evaluations require explicitly authorized provider use, prepared runtime and
+fresh bounded stores. They are separate from ordinary tests:
+
+```sh
+uv run python tests/evaluate_quality.py --allow-model --provider openai \
+  --store .work/evaluation --run-id unique-run
+uv run python tests/evaluate_storytelling.py --allow-model --case case-study \
+  --provider anthropic --model claude-sonnet-4-6 --store .work/case-study \
+  --request-id case-study-1 --report .work/case-study-report.json
+```
+
+Read each script's help first. Trials spend tokens and may take several minutes.
+Use fresh request IDs for new intent. Record failed candidates as well as successes;
+inspect semantics, provenance and rendered output rather than treating model review
+as independent proof. Keep reports, stores and screenshots in `.work/`. For UI changes,
+exercise the actual browser flow and verify that material, draft and revision context
+survive. Stop owned trial services when finished.
+
+Report changes, relevant checks and remaining limits. Commit/push when requested.

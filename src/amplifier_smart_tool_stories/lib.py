@@ -815,7 +815,7 @@ class Stories:
                     "description": getattr(Stories, name).__doc__,
                     "signature": str(inspect.signature(getattr(Stories, name))),
                     "intelligence": "model-backed"
-                    if name in {"generate", "run_operation", "test_provider"}
+                    if name in {"generate", "answer_question", "run_operation", "test_provider"}
                     else "conditional"
                     if name in {"add_comment", "respond"}
                     else "deterministic",

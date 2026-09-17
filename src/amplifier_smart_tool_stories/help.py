@@ -46,7 +46,7 @@ GUIDANCE = {
     "answer_question": (
         "Continue initial generation after a question.",
         "Queued receipt with story_id, operation_id and question_operation_id.",
-        "Use a needs_input generation operation ID, answer text and a new finite grant. The original provider and story are retained. Each question accepts one answer; identical request_id retries reuse the receipt. Use --model-env for execution; queued work needs run-operation.",
+        "Use a needs_input generation operation ID, answer text and a new finite grant. The original provider and story are retained. The parent becomes continued with answered_by pointing to the new operation. Each question accepts one answer; identical request_id retries reuse the receipt. Use --model-env for execution; queued work needs run-operation.",
     ),
     "accept_revision": (
         "Record a person's explicitly conveyed acceptance.",
@@ -71,7 +71,7 @@ GUIDANCE = {
     "generate": (
         "Create source-backed material for a specified audience.",
         "Queued receipt with story_id and operation_id; inspect get-operation for the accepted revision or failure.",
-        "kind is presentation or document. Sources are id/name/content objects with literal text. grant bounds operations, timeout_seconds and max_output_tokens; optional expires_at is a Unix timestamp within 24 hours. Prepare the provider runtime first. Default queued execution needs run-operation; background and in_process execute on submission. Source context is sent to the selected provider; rendering needs Pango. No network research or fallback provider.",
+        "kind is presentation or document. Sources require id/content with literal text; optional name, kind (source/summary/hypothesis/preference) and attribution preserve source status. grant bounds operations, timeout_seconds and max_output_tokens; optional expires_at is a Unix timestamp within 24 hours. Prepare the provider runtime first. Default queued execution needs run-operation; background and in_process execute on submission. Source context is sent to the selected provider; rendering needs Pango. No network research or fallback provider.",
     ),
     "list_stories": (
         "Find retained work to resume.",
@@ -80,12 +80,12 @@ GUIDANCE = {
     ),
     "get_story": (
         "Resume review and inspect feedback outcomes.",
-        "Shared story state, revision summaries, annotations, saved drafts and authority.",
+        "Shared story state, revision summaries, annotations, saved drafts, authority and revision-specific human acceptances.",
         "Read-only; does not start pending work. Use get-revision for artifact contents.",
     ),
     "get_revision": (
         "Inspect the exact artifact and its checks.",
-        "Immutable revision including HTML, document where applicable, evidence and checks.",
+        "Immutable revision including HTML, document where applicable, evidence, checks, changes and verified calculations.",
         "Name the revision explicitly; a newer revision does not replace this one.",
     ),
     "get_preview": (
@@ -125,7 +125,7 @@ GUIDANCE = {
     ),
     "get_operation": (
         "Poll submitted work without executing it.",
-        "Operation state, result and error when present.",
+        "Operation state, result and error when present; results include changes and calculations. An answered generation question becomes continued with answered_by identifying its continuation.",
         "Queued is not completion. Inspect failure and needs_input outcomes. Interrupted or uncertain work is never retried automatically.",
     ),
     "run_operation": (
@@ -201,7 +201,7 @@ FIELD_HELP = {
     "purpose": "Desired communication outcome",
     "audience": "Intended readers",
     "html": "Literal HTML content",
-    "sources": "List of source objects with id, name and content text",
+    "sources": "List of source objects: required id/content; optional name, kind (source/summary/hypothesis/preference), attribution",
     "document": "Structured title, subtitle and blocks object",
     "request_id": "Caller-chosen unique mutation identity",
     "story_id": "Retained story ID",

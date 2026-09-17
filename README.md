@@ -2,63 +2,106 @@
 
 **Turn source material into stories people can use.**
 
-Stories is a smart tool for creating evidence-based presentations, documents and
-data-backed communication. Supply the material, describe the audience and purpose,
-and receive an artifact with its sources and limitations—not instructions for
-doing the work yourself.
+Stories helps you and your agent turn notes, evidence and existing writing into
+presentations and documents. Describe who you are writing for and what they need
+to understand. Stories plans, writes and reviews a draft, keeping its claims tied
+to the material you supplied.
 
-The tool brings together research, narrative planning, writing, design and format
-adaptation. Claims stay tied to evidence; missing information stays visible.
-Creating an artifact does not publish it.
+Review the actual slides or document in a local workspace. Your agent can highlight
+something worth your attention, and you can select text or an element to leave a
+comment. Stories can answer or revise directly while you keep reading. Comments
+stay outside the finished document, and you choose when to open a new version.
 
-## Use it from your own environment
+## Quick start: bring your material to your agent
 
-Stories is designed for people, agents and applications:
+Give your coding agent this message, replacing the example with your own brief:
 
-- **Command line:** `stories`
-- **Python library:** `amplifier_smart_tool_stories`
-- **Package:** `amplifier-smart-tool-stories`
+> Use [Stories](https://github.com/robotdad/amplifier-smart-tool-stories) to turn
+> the project notes I provide into a short presentation for engineering leaders.
+> Install Stories and read `stories --help` for its operating skill, then read
+> the help for each command you need. Help me configure a provider, keep claims
+> grounded in the supplied notes, and open the draft for review. Enable a bounded
+> round of comment-driven refinement.
 
-Its model-backed capabilities run inside the tool rather than relying on the
-caller's agent. Deterministic operations need no model credentials.
+Your agent installs and runs the tool, supplies your material, and opens the review
+workspace. You can also ask for a document, an executive brief, release notes, a
+case study or an explanation of measurements. No repository checkout is needed to
+use Stories.
 
-**Development status:** HTML presentations and structured documents with shared review.
+### Before your first story
+
+Use a coding agent that can install and run local tools and open a browser for the
+optional workspace. Stories requires Python 3.12+, Git and uv. Creating and reviewing
+generated artifacts also requires Pango for text layout. Your agent can follow the
+[setup instructions](src/amplifier_smart_tool_stories/SMART_TOOL.md#install-and-prerequisites).
+The current implementation is validated on macOS.
+
+Stories uses **Amplifier Agent** and needs its own configured model access. Your
+coding agent’s model access is not automatically shared with it. OpenAI, Anthropic,
+Gemini, ChatGPT and GitHub Copilot are supported; use a model with image input and
+tool calling for artifact generation. Ask your agent to configure the provider and
+prepare its runtime. Complete any required sign-in yourself. The workspace also
+provides provider settings, model discovery and connection testing.
+
+Generation sends the supplied story context and rendered review images to the
+selected provider. Reading retained work, leaving agent highlights and recording
+acceptance do not require a model. Source material is supplied explicitly; Stories
+does not currently crawl repositories or websites for it.
+
+### For the agent receiving this link
+
+Install without cloning the repository:
 
 ```sh
-uv sync --extra dev
-uv run stories --help
-uv run stories manifest
+uv tool install "amplifier-smart-tool-stories @ git+https://github.com/robotdad/amplifier-smart-tool-stories"
+stories --help
 ```
 
-Import or generate HTML, open a material-first review surface, add caller highlights,
-and submit anchored comments that can answer or revise through embedded Amplifier
-Agent. The library, CLI and dashboard share retained state. Provider choices are
-OpenAI, ChatGPT, Copilot, Anthropic and Gemini; credentials and runtime preparation
-are explicit. Documents support continuous/paginated reading, zoom and a toolbar
-that appears when needed. PDF and editable Word exports are available with explicit
-layout limits. Provider settings offer session-only selection, model discovery, connection tests and native sign-in. PowerPoint and spreadsheet work remain deferred.
+Read `stories <command> --help` before invoking a capability. Both `--help` and `-h`
+print operating skills with inputs, examples, results and recovery guidance.
+The [caller guide](docs/USAGE.md) covers the library, CLI and provider setup.
 
-Generation selects packaged expertise for case studies, releases, technical explanations,
-public and community communication, executive briefs, adaptation, editorial plans and
-metrics interpretation. Callers describe purpose and audience; they do not route agents.
-See [storytelling coverage](docs/STORYTELLING.md) for the bundle mapping and limits.
-Generation uses native structured submissions.
-Every generated or revised artifact receives source-fidelity and static rendered-page
-model review, with at most one repair. Review findings and limits stay attached to
-the exact artifact. Static rendering requires Pango; imports and reading do not.
+## What the loop looks like
 
-See [usage and limits](docs/USAGE.md) and the
-[operating guide](src/amplifier_smart_tool_stories/SMART_TOOL.md).
+1. **Bring the evidence.** Supply source text and distinguish original material from
+   summaries, hypotheses and preferences. Describe the audience and purpose.
+2. **Read a draft.** Stories creates slides or a document and reviews the sources
+   and rendered pages. Missing information and review limits remain inspectable.
+3. **Comment and refine.** Select material or comment on the whole story. With
+   authorized model work available, Stories can answer, revise or ask a question.
+   Your agent can retrieve the same feedback and resulting versions later.
+4. **Accept and export.** Accept a specific revision when you are satisfied. Export
+   presentations as HTML, or documents as HTML, PDF or editable Word. Acceptance
+   stays separate from model checks and does not publish anything.
 
-## Project documents
+Documents offer continuous reading, optional pages and zoom through a small
+**View & comments** tab. Comments float without moving the material. New versions
+arrive without replacing the one you are reading or discarding a saved draft.
+Story details includes sources, review findings, calculations and material changes.
 
-- [Vision](docs/VISION.md) — what Stories is for.
-- [Invocation contract](contracts/invocation.v1.md) — how callers use the tool.
-- [Caller interaction contract](contracts/caller-interaction.v1.md) — context,
-  clarification, authority and revision continuity.
-- [Dashboard contract](contracts/dashboard.v1.md) — optional review workspace,
-  shared feedback/settings and presentation lifecycle.
-- [Storytelling contract](contracts/storytelling.v1.md) — evidence and output quality.
-- [Internal execution contract](contracts/internal-execution.v1.md) — bounded
-  intelligence, artifact production and review enforcement.
-- [Contributor guidance](AGENTS.md) — how to work on the code.
+The workspace can act on submitted comments within its allowance, but it does not
+wake the calling agent automatically. Closing its browser tab does not stop the
+service; ask your agent to stop it when finished. Retained work remains available.
+
+## What to expect
+
+Stories is an early implementation. Generation time and quality depend on the
+material and model. It checks source quotations and supported arithmetic, and uses
+model review for factual interpretation and rendered quality. Those checks can miss
+problems; review the result before relying on it.
+
+Documents currently support headings, paragraphs, lists, quotations and tables.
+Imported HTML may preview differently when it depends on scripts or external assets.
+Word wrapping and pagination can differ from the HTML review; inspect the exported
+file when its layout matters. Spreadsheet work and faithful PowerPoint export are
+parked.
+
+The [storytelling coverage](docs/STORYTELLING.md) explains the writing approaches
+adapted from the reference bundle and their limits. The [vision](docs/VISION.md)
+and [contracts](contracts/) describe the broader intent and behavioral requirements.
+
+## Developing or contributing?
+
+Clone the repository when you want to work on Stories itself.
+[`AGENTS.md`](AGENTS.md) covers checkout setup, architecture, validation and the
+contribution workflow. Agent callers should start with the installed help.

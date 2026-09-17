@@ -5,20 +5,6 @@ The [installed operating guide](../src/amplifier_smart_tool_stories/SMART_TOOL.m
 is the complete CLI/library reference. The broader contracts remain the product
 requirements; this release does not claim full conformance to all of them.
 
-## Development
-
-```sh
-uv sync --extra dev
-uv run stories --help
-uv run pytest
-uv run ruff check src tests
-```
-
-The Amplifier Agent dependency tracks `main`. `uv.lock` records the revision used
-for a development environment; use `uv lock --upgrade-package amplifier-agent`
-and rerun validation when advancing it. New Git installs resolve main. No fixed
-local checkout or external skills directory is used.
-
 ## Import a story and open review
 
 ```python
@@ -64,9 +50,11 @@ stories --model-env --provider openai test-provider
 
 Use OpenAI, Anthropic and Gemini environment keys. `provider-settings` reveals only
 credential readiness and variable names. ChatGPT (`chatgpt`/`openai-chatgpt`) uses
-Amplifier's OAuth token cache; complete its device login before invoking Stories.
-Copilot (`copilot`/`github-copilot`) uses its native token environment; a `gh` login
-alone is not enough for this adapter unless its token is explicitly exported.
+Amplifier's OAuth token cache; use `provider-login` or dashboard Sign in before generation.
+Copilot (`copilot`/`github-copilot`) uses native environment tokens or explicit
+`provider-login`/dashboard Sign in backed by GitHub CLI. Sign-in makes its token
+available to the current process. For a later CLI process, explicitly export a
+GitHub CLI token into a supported environment variable such as GH_TOKEN.
 Stories never starts interactive authentication from a background worker.
 
 ```python
@@ -139,21 +127,12 @@ provider may still be billed. There is no automatic publication or caller wake-u
   reassociation between revisions.
 - Semantic and static rendered-quality review are model judgments with recorded
   limits. Imported artifacts still report these as `not_performed`.
-- `needs_input` is a visible clarification outcome. Reply on the same target with
-  the missing context to create a new operation; no implicit model continuation.
+- `needs_input` is a visible clarification outcome. Use `respond` for a comment
+  question or `answer-question` with a new grant for initial generation. The latter
+  marks its parent `continued` and exposes `answered_by`; no implicit model continuation.
 - One local host and a private loopback viewer; no remote multi-user service.
 - Provider settings are session-local. ChatGPT/Copilot account authorization requires the person to complete the provider’s sign-in flow.
 - macOS is the validated platform. Other platforms are not advertised yet.
-
-## Live quality evaluation
-
-`uv run python tests/evaluate_quality.py --allow-model --provider openai --store
-.work/evaluation --run-id unique-run` runs the historical bundle case study and metrics
-scenario. Prepare the selected provider first. This spends model tokens and can take
-up to ten minutes; it is separate from normal tests. Use a new run ID for new intent.
-Its report separates narrow deterministic checks (requested slide count and retained
-historical date/count) from the model's source and image review. A model pass alone is
-not a general quality benchmark. Raw results and review artifacts belong in `.work/`.
 
 ## Documents
 
@@ -266,18 +245,8 @@ conversion of arbitrary uploaded files. See [coverage and limits](STORYTELLING.m
 Operation results retain selected guidance IDs and hashes under
 `provenance.expertise`, alongside the internal narrative plan. That trace proves
 which guidance was used, not semantic correctness. Source and rendered review are
-still required, and the live scenario suite is explicitly opt-in:
-
-```sh
-uv run python tests/evaluate_storytelling.py --allow-model --case case-study \
-  --provider anthropic --model claude-sonnet-4-6 --store .work/case-study \
-  --request-id case-study-1 --report .work/case-study-report.json
-```
-
-Run a new case with a new request ID. Failed candidates remain inspectable; the
-harness never automatically retries or silently changes provider. Scenario text and
-routing/detail checks supplement model review; neither test counts nor the example
-bundle's own claims establish general quality guarantees.
+still required. Contributor guidance in [AGENTS.md](../AGENTS.md) covers the opt-in
+live scenario suite and how to interpret its results.
 
 ## CLI operating skills
 
