@@ -4,9 +4,10 @@ name: amplifier-smart-tool-stories
 version: 0.1.0
 description: >-
   Create evidence-based HTML stories and review them with agent highlights and
-  anchored comments. Use for source-backed communication and shared review.
+  anchored comments. Export editable PowerPoint adaptations. Use for source-backed communication and shared review.
 use_cases:
   - Turn supplied evidence into an HTML presentation
+  - Export a reviewed slide revision as editable PowerPoint
   - Review a story with a person and highlight material that needs attention
   - Answer or act on anchored feedback while preserving the reader's place
 platforms:
@@ -26,7 +27,8 @@ requires:
 Create evidence-based HTML stories and review them with a person. The Python
 library is the product; the `stories` CLI and optional local dashboard share its
 state. This first slice supports HTML import, source-to-HTML generation, and
-anchored review. It does not yet produce PowerPoint, Word, PDF or spreadsheets.
+anchored review, and deterministic editable PowerPoint adaptation. Word, PDF and
+spreadsheets are not implemented.
 
 ## Install and prerequisites
 
@@ -158,7 +160,10 @@ All exist as methods on Stories (hyphens become underscores):
   reported interrupted/uncertain; cancel it before explicitly creating replacement work.
 - `run-operation`: claim and execute one queued operation exactly once.
 - `cancel-operation`: prevent late commits and cooperatively stop active model work.
-- `export`: write exact named revision to a new output_path; never overwrite existing files.
+- `export`: write the named revision to a new output_path; `format` is `html` (default)
+  or `pptx`. HTML preserves exact bytes; PPTX adapts the layout. Never overwrites files.
+- `get-export`: same format selection, returns base64 `data` for adapters, media type,
+  output hash, source hash, revision ID, checks and limitations; no filesystem writes.
 - `provider-settings`: redacted effective settings and credential readiness.
 - `configure-provider`: process-local future settings; no credential storage or spending.
 - `prepare-runtime`: explicit dependency preparation, network/package/cache writes.
@@ -187,3 +192,32 @@ Only supplied content is available to intelligence. HTML with external assets or
 scripts may preview differently; exported originals may contain their original active
 content. Non-HTML authoring/conversion, independent semantic/visual grading, production
 brand systems and settings UI remain outside this initial slice.
+
+
+## PowerPoint export
+
+After generating or importing an HTML slide deck, call:
+
+```sh
+stories --store ./state export --input '{"story_id":"story_…","revision_id":"rev_…","output_path":"/chosen/deck.pptx","format":"pptx"}'
+```
+
+The dashboard offers the same choice under Story details. It previews the HTML
+source; the PowerPoint is an identified derived artifact with a different layout.
+No model, Pango, LibreOffice, external skills or network access is needed for this
+conversion. python-pptx is included as a package dependency.
+
+Supports 1–12 slide sections, headings, paragraphs, lists and rectangular tables
+(up to six columns, no merged cells). Text and tables remain native editable objects.
+A plain dark layout uses readable type, explicit wrapping and preserved document
+order. CSS, rich inline styling, chart semantics, media and animation are not
+translated. Media/merged tables, missing text, content outside slides, or content
+that cannot fit at the minimum 16pt body size fail before writing an output.
+Split dense slides before exporting; there is no silent truncation or autoshrink.
+
+Each slide's speaker notes retain the source revision/hash, evidence IDs with exact
+quotes/source IDs, and recorded limitations. Comments, highlights and drafts are
+never included. The receipt distinguishes structural/text/bounds checks from
+PowerPoint visual review, which is not performed by this operation. Source HTML
+model review does not certify the converted deck's appearance. Font substitution
+and application rendering can affect layout; inspect the deck in your target app.

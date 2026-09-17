@@ -373,7 +373,9 @@ $("closeDetails").onclick = () => {
 };
 $("available").onclick = () => choose(story.latest_revision).catch(error);
 $("versions").onchange = (e) => choose(e.target.value).catch(error);
+$("exportFormat").onchange = () => { $("exportLimit").hidden = $("exportFormat").value !== "pptx"; };
 $("export").onclick = async () => {
+  const format = $("exportFormat").value;
   try {
     const r = await fetch("/api/download", {
       method: "POST",
@@ -381,13 +383,13 @@ $("export").onclick = async () => {
         Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ revision_id: revision }),
+      body: JSON.stringify({ revision_id: revision, format }),
     });
-    if (!r.ok) throw Error("Export failed");
+    if (!r.ok) { const failure = await r.json(); throw Error(failure.error?.message || "Export failed"); }
     const url = URL.createObjectURL(await r.blob());
     const a = document.createElement("a");
     a.href = url;
-    a.download = story.title.replace(/[^a-z0-9 -]/gi, "") + ".html";
+    a.download = story.title.replace(/[^a-z0-9 -]/gi, "") + "." + format;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {

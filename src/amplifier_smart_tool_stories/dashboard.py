@@ -1,5 +1,6 @@
 """Owned authenticated loopback service. Content runs in an opaque sandbox, without credentials."""
 
+import base64
 import hmac
 import json
 import os
@@ -30,7 +31,11 @@ class Dashboard:
                 pass  # Access logs must not collect bearer credentials or material.
 
             def send(self, status, payload, mime="application/json", attachment=False):
-                raw = payload.encode() if isinstance(payload, str) else json.dumps(payload).encode()
+                raw = (
+                    payload
+                    if isinstance(payload, bytes)
+                    else (payload.encode() if isinstance(payload, str) else json.dumps(payload).encode())
+                )
                 self.send_response(status)
                 self.send_header("Content-Type", mime + "; charset=utf-8")
                 self.send_header("Content-Length", str(len(raw)))
@@ -42,7 +47,7 @@ class Dashboard:
                     "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self' about:; img-src data:; frame-ancestors 'none'",
                 )
                 if attachment:
-                    self.send_header("Content-Disposition", 'attachment; filename="story.html"')
+                    self.send_header("Content-Disposition", f'attachment; filename="story.{attachment}"')
                 self.end_headers()
                 self.wfile.write(raw)
 
@@ -94,8 +99,15 @@ class Dashboard:
                         threading.Thread(target=owner.server.shutdown, daemon=True).start()
                         return
                     elif path == "/api/download":
-                        rev = owner.api.get_revision(owner.story_id, data["revision_id"])
-                        self.send(200, rev["html"], "text/html", attachment=True)
+                        result = owner.api.get_export(
+                            owner.story_id, data["revision_id"], data.get("format", "html")
+                        )
+                        self.send(
+                            200,
+                            base64.b64decode(result["data"]),
+                            result["media_type"],
+                            attachment=result["format"],
+                        )
                         return
                     else:
                         name = path.removeprefix("/api/").replace("-", "_")

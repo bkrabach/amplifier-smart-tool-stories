@@ -130,7 +130,9 @@ provider may still be billed. There is no automatic publication or caller wake-u
 
 ## Current limits
 
-- HTML only; other formats and conversion are not yet implemented.
+- HTML generation/import/review and editable PowerPoint adaptation are implemented.
+  PowerPoint is a simple semantic layout, not HTML styling fidelity. Media, charts,
+  merged tables, and PPTX import/editing are unsupported.
 - Review sources are supplied text; no repository/session/network research connectors.
 - Static previews suppress active content and external assets. Native text anchors
   are Unicode character offsets, scoped to an exact revision. No automatic anchor
@@ -152,3 +154,22 @@ up to ten minutes; it is separate from normal tests. Use a new run ID for new in
 Its report separates narrow deterministic checks (requested slide count and retained
 historical date/count) from the model's source and image review. A model pass alone is
 not a general quality benchmark. Raw results and review artifacts belong in `.work/`.
+
+
+## Editable PowerPoint
+
+```python
+receipt = api.export(story, revision, '/chosen/deck.pptx', format='pptx')
+```
+
+CLI: `stories export --input '{"story_id":"…","revision_id":"…","output_path":"/chosen/deck.pptx","format":"pptx"}'`.
+Dashboard: Story details → Export format → PowerPoint. The dashboard still displays
+the HTML source; conversion changes the layout. Exports need no provider or external
+renderer. Source quotes and revision identity remain in speaker notes; review
+comments remain outside the artifact. Structural, text-coverage and canvas checks
+run before export; visual review of the converted deck is explicitly unperformed.
+
+See the operating guide for supported structures and failure behavior. The bundled
+Python converter needs no Anthropic skills, Pango or LibreOffice. Development visual
+validation may use an independently installed renderer; that is not a runtime
+prerequisite or a claim that every export has been visually reviewed.

@@ -71,3 +71,24 @@ def test_owned_process_lifecycle_and_retention(tmp_path):
     assert viewer["url"].startswith("http://127.0.0.1:") and "#" in viewer["url"]
     assert api.stop_dashboard(viewer["service_id"])["status"] == "stopped"
     assert api.get_revision(created["story_id"], created["revision_id"])["html"].endswith("</html>")
+
+
+def test_powerpoint_download_identifies_format_and_revision(server):
+    import io
+
+    from pptx import Presentation
+
+    s, r, _ = server
+    # This server's imported document is not a deck: fail explicitly, not empty PPTX.
+    with pytest.raises(urllib.error.HTTPError):
+        post(s, "download", {"revision_id": r["revision_id"], "format": "pptx"})
+    with s.api.store.transaction() as db:
+        story = s.api.store.get(db, "stories", r["story_id"])
+        rev = s.api._new_revision(
+            story, '<html><body><section class="slide"><h1>Deck</h1></section></body></html>'
+        )
+        s.api.store.put(db, "stories", story)
+    with post(s, "download", {"revision_id": rev["id"], "format": "pptx"}) as response:
+        assert response.headers["Content-Type"].startswith("application/vnd.openxmlformats")
+        assert "story.pptx" in response.headers["Content-Disposition"]
+        assert len(Presentation(io.BytesIO(response.read())).slides) == 1

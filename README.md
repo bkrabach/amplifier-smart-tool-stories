@@ -22,7 +22,7 @@ Stories is designed for people, agents and applications:
 Its model-backed capabilities run inside the tool rather than relying on the
 caller's agent. Deterministic operations need no model credentials.
 
-**Development status:** initial HTML storytelling and review implementation.
+**Development status:** HTML storytelling, shared review, and editable PowerPoint export.
 
 ```sh
 uv sync --extra dev
@@ -34,7 +34,8 @@ Import or generate HTML, open a material-first review surface, add caller highli
 and submit anchored comments that can answer or revise through embedded Amplifier
 Agent. The library, CLI and dashboard share retained state. Provider choices are
 OpenAI, ChatGPT, Copilot, Anthropic and Gemini; credentials and runtime preparation
-are explicit. Provider settings UI and non-HTML formats are deferred.
+are explicit. Provider settings UI is deferred. Export any supported slide revision as editable PowerPoint;
+conversion preserves text and references in a simple semantic layout, not the HTML styling.
 
 Generation uses packaged narrative/design guidance and native structured submissions.
 Every generated or revised artifact receives source-fidelity and static rendered-page
