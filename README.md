@@ -28,6 +28,9 @@ caller's agent. Deterministic operations need no model credentials.
 
 - [Vision](docs/VISION.md) — what Stories is for.
 - [Invocation contract](contracts/invocation.v1.md) — how callers use the tool.
+- [Caller interaction contract](contracts/caller-interaction.v1.md) — context,
+  clarification, authority and revision continuity.
 - [Storytelling contract](contracts/storytelling.v1.md) — evidence and output quality.
+- [Internal execution contract](contracts/internal-execution.v1.md) — bounded
+  intelligence, artifact production and review enforcement.
 - [Contributor guidance](AGENTS.md) — how to work on the code.
-

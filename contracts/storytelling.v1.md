@@ -20,6 +20,10 @@ Wrong: "All customers are 20% more productive", citing that same source.
 Stories helps people communicate without making the evidence stronger than it is.
 It delivers an artifact suitable for the requested audience and supported format.
 Its result makes factual support, omissions and review limits inspectable.
+The [caller-interaction contract](caller-interaction.v1.md) defines how callers
+request and revise that result. The
+[internal execution contract](internal-execution.v1.md) defines how production,
+evidence and checks remain tied to the submitted artifact.
 
 ## Core (the teeth)
 

@@ -20,6 +20,10 @@ Wrong: importing Stories boots an agent and fails because no provider is configu
 Stories is usable independently of the harness that hosts its caller.
 The same capability is available to programs and command-line users.
 Failures and side effects are predictable enough to compose safely.
+The [caller-interaction contract](caller-interaction.v1.md) defines context,
+clarification and revision continuity; the
+[internal execution contract](internal-execution.v1.md) defines enforcement behind
+that public boundary.
 
 ## Core (the teeth)
 
@@ -44,8 +48,10 @@ Failures and side effects are predictable enough to compose safely.
    Content is not sent to other destinations through telemetry or unrequested research.
 6. **Source inputs and optional additional context contain data.** Each capability
    documents required source inputs separately from optional context. CLI file
-   options load content before calling the library; caller-side context assembly is
-   mechanical, not model-selected summarization. Stories' own research is separate:
+   options load the selected content before calling the library without silently
+   summarizing it. Callers may supply summaries, hypotheses and preferences as
+   explicitly identified context; these do not become inspected original evidence.
+   Stories' own research is separate:
    repository or network inspection needs documented, explicitly selected scope.
 7. **Results and failures are machine-usable.** Results identify artifacts and
    completion status; machine output uses stdout and progress uses stderr.

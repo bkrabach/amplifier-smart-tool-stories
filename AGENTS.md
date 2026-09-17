@@ -1,7 +1,7 @@
 # Working on Stories
 
 Read [the vision](docs/VISION.md) for product intent and [the contracts](contracts/)
-for caller-facing requirements.
+for caller-facing requirements and internal execution obligations.
 
 ## Code structure
 
@@ -22,4 +22,3 @@ for caller-facing requirements.
 - Preserve upstream licenses and attribution when reusing code or assets.
 - Keep work items and their acceptance criteria in Work Tracker, not planning documents.
 - Keep this file to durable contributor guidance; do not add session status or deliberation.
-
