@@ -36,6 +36,11 @@ Agent. The library, CLI and dashboard share retained state. Provider choices are
 OpenAI, ChatGPT, Copilot, Anthropic and Gemini; credentials and runtime preparation
 are explicit. Provider settings UI and non-HTML formats are deferred.
 
+Generation uses packaged narrative/design guidance and native structured submissions.
+Every generated or revised artifact receives source-fidelity and static rendered-page
+model review, with at most one repair. Review findings and limits stay attached to
+the exact artifact. Static rendering requires Pango; imports and reading do not.
+
 See [usage and limits](docs/USAGE.md) and the
 [operating guide](src/amplifier_smart_tool_stories/SMART_TOOL.md).
 

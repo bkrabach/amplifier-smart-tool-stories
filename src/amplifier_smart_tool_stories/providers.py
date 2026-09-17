@@ -170,12 +170,18 @@ def prepare_runtime(config):
             )
         mark = marker(config)
         mark.parent.mkdir(parents=True, exist_ok=True)
-        mark.write_text(json.dumps({
-            **config.public(),
-            "python_prefix": sys.prefix,
-            "artifact_sha256": hashlib.sha256((mark.parent / "prepared.pickle").read_bytes()).hexdigest(),
-            "module_paths": {key: str(path) for key, path in bundle.resolver._paths.items()},
-        }))
+        mark.write_text(
+            json.dumps(
+                {
+                    **config.public(),
+                    "python_prefix": sys.prefix,
+                    "artifact_sha256": hashlib.sha256(
+                        (mark.parent / "prepared.pickle").read_bytes()
+                    ).hexdigest(),
+                    "module_paths": {key: str(path) for key, path in bundle.resolver._paths.items()},
+                }
+            )
+        )
         return {"status": "succeeded", "provider": config.provider, "runtime": "amplifier-agent"}
 
     try:
@@ -190,8 +196,8 @@ def prepare_runtime(config):
         ) from None
 
 
-async def complete(provider, config, messages, max_tokens, timeout):
-    from amplifier_core.message_models import ChatRequest, Message
+async def complete(provider, config, messages, max_tokens, timeout, schema=None):
+    from amplifier_core.message_models import ChatRequest, Message, ToolSpec
 
     response = await provider.complete(
         ChatRequest(
@@ -199,6 +205,16 @@ async def complete(provider, config, messages, max_tokens, timeout):
             model=config.model,
             max_output_tokens=max_tokens,
             timeout=timeout,
+            tools=[
+                ToolSpec(
+                    name="submit_result",
+                    description="Submit the requested structured result. No external action.",
+                    parameters=schema,
+                )
+            ]
+            if schema
+            else None,
+            tool_choice="required" if schema else None,
         )
     )
     content = response.content
@@ -206,6 +222,14 @@ async def complete(provider, config, messages, max_tokens, timeout):
         text = content
     else:
         text = "".join(getattr(part, "text", "") or "" for part in content)
+    if schema:
+        submissions = [call for call in response.tool_calls or [] if call.name == "submit_result"]
+        require(
+            len(submissions) == 1 and len(response.tool_calls or []) == 1,
+            "Expected one structured submission.",
+            "invalid_model_result",
+        )
+        text = json.dumps(submissions[0].arguments)
     usage = getattr(response, "usage", None)
     usage = usage.model_dump() if hasattr(usage, "model_dump") else {}
     return text, {

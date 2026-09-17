@@ -192,6 +192,15 @@ function update() {
           .map(([k, v]) => k + ": " + v)
           .join("\n")
       : "No revision") +
+    (current?.quality_review
+      ? "\n\nModel review of " +
+        current.quality_review.pages.length +
+        " rendered pages\n" +
+        [
+          ...current.quality_review.warnings,
+          ...current.quality_review.limits,
+        ].join("\n")
+      : "") +
     "\n\n" +
     story.sources.map((s) => s.name + "\n" + s.content).join("\n\n");
   const versions = $("versions");

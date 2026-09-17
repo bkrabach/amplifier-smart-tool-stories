@@ -345,7 +345,7 @@ class Stories:
             return {"status": "saved", "sequence": sequence}
 
     def generate(self, title, purpose, audience, sources, grant, request_id):
-        """Generate an evidence-backed HTML story from supplied text in two bounded model calls."""
+        """Generate and review an HTML story; at most five model calls including one repair."""
         require(
             all(isinstance(x, str) and x.strip() for x in (title, purpose, audience)),
             "Title, purpose, audience required.",
@@ -465,6 +465,11 @@ class Stories:
                 new_revision = None
                 evidence = evidence_checked(result.get("evidence", []), story["sources"])
                 if result["action"] == "revise":
+                    from .quality import validate_record
+
+                    quality = result.get("quality_review")
+                    if self.intelligence is None or quality is not None:
+                        validate_record(result.get("html"), quality)
                     require(
                         bool(evidence) or not story["sources"], "Revision with sources requires evidence."
                     )
@@ -476,6 +481,10 @@ class Stories:
                     rev = self._new_revision(
                         story, result.get("html"), op["revision_id"], evidence, limitations, "model"
                     )
+                    if quality is not None:
+                        rev["quality_review"] = quality
+                        rev["review"]["semantic"] = "passed: model review of source fidelity and narrative"
+                        rev["review"]["visual"] = "passed: model review of static rendered pages"
                     new_revision = rev["id"]
                 for note in story["annotations"]:
                     if note["id"] == op["annotation_id"]:
@@ -499,6 +508,7 @@ class Stories:
                         "revision_id": new_revision,
                         "provenance": result.get("provenance", {}),
                         "evidence": evidence,
+                        "review_attempts": result.get("review_attempts", []),
                     },
                 )
                 self.store.put(db, "stories", story)
@@ -525,6 +535,8 @@ class Stories:
                 current = self.store.get(db, "operations", operation_id)
                 if current["state"] == "running":
                     current.update(state="failed", error=error, finished_at=now(), cleanup="complete")
+                    if hasattr(exc, "candidate"):
+                        current["candidate"] = exc.candidate
                     self.store.put(db, "operations", current)
                     story = self.store.get(db, "stories", op["story_id"])
                     for note in story["annotations"]:

@@ -7,8 +7,18 @@
     slide = 0,
     noteRanges = [];
   const slides = [...document.querySelectorAll(".slide")];
+  for (const slide of slides) {
+    const computed = getComputedStyle(slide);
+    const display =
+      computed.display === "none"
+        ? computed.flexDirection === "column"
+          ? "flex"
+          : "block"
+        : computed.display;
+    slide.style.setProperty("--stories-display", display);
+  }
   const style = document.createElement("style");
-  style.textContent = `html,body{margin:0;min-height:100%;}body{padding:0!important}.slide{box-sizing:border-box!important;display:none!important;min-height:100vh!important;width:100%!important}.slide.stories-current{display:flex!important;position:relative!important;opacity:1!important;visibility:visible!important;transform:none!important}::highlight(stories){background:#f8d36b75;text-decoration:underline}::highlight(selectionTarget){background:#92c5ff80}[data-stories-selected]{outline:2px solid #95bde8!important;outline-offset:3px}[data-stories-agent]{outline:2px solid #f8d36b!important;outline-offset:3px}nav,.nav-dots,.slide-counter,.navigation{display:none!important}body{user-select:text!important}*{user-select:text}.stories-current{pointer-events:auto!important}`;
+  style.textContent = `html,body{margin:0;min-height:100%;}body{padding:0!important}.slide{box-sizing:border-box!important;display:none!important;min-height:100vh!important;width:100%!important}.slide.stories-current{display:var(--stories-display,block)!important;position:relative!important;opacity:1!important;visibility:visible!important;transform:none!important}::highlight(stories){background:#f8d36b75;text-decoration:underline}::highlight(selectionTarget){background:#92c5ff80}[data-stories-selected]{outline:2px solid #95bde8!important;outline-offset:3px}[data-stories-agent]{outline:2px solid #f8d36b!important;outline-offset:3px}nav,.nav-dots,.slide-counter,.navigation{display:none!important}body{user-select:text!important}*{user-select:text}.stories-current{pointer-events:auto!important}`;
   document.head.append(style);
   const element = (id) =>
     [...document.querySelectorAll("[data-stories-id]")].find(

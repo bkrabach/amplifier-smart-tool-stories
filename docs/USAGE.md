@@ -76,9 +76,10 @@ api.grant_feedback(story, {'max_operations':5, 'timeout_seconds':180}, 'review-g
 viewer = api.start_dashboard(story, revision)
 ```
 
-Submitted comments now queue bounded model responses automatically. There are two
-calls per operation at most: evidence extraction with exact source-quote validation,
-then contextual answer/clarification/revision. User drafts and caller highlights
+Submitted comments queue bounded model responses automatically. Answers and
+clarifications use at most two calls. Artifact production adds review against sources
+and rendered images, with at most one repair and fresh review: five calls total.
+All stages share the operation's time allowance. User drafts and caller highlights
 never execute a model. Model settings are captured at operation creation; changing
 settings later does not reroute existing work. No credentials are written to story
 state. Provider modules own their normal OAuth and rate-limit caches.
@@ -89,6 +90,30 @@ work; `--execution background` starts an owned worker immediately. Status reads
 never restart work. A failed or interrupted operation needs explicit new intent to
 spend again; an identical request_id returns its old receipt. A new revision remains
 tied to its base, and the user's selected revision does not silently advance.
+
+## Artifact quality review
+
+Install Pango for static text layout (`brew install pango` on macOS). WeasyPrint and
+PDFium are package dependencies. Rendering needs no browser download or LibreOffice;
+missing prerequisites produce an actionable failure instead of installing anything.
+Standard Homebrew library locations are detected on macOS; a custom installation can
+set `DYLD_FALLBACK_LIBRARY_PATH` explicitly.
+
+Narrative and design guidance adapts the bundle's audience mapping, evidence discipline,
+visual hierarchy and readability guidance. The reviewer sees source texts, the request,
+the exact proposed HTML and images of every rendered page. Code checks text bounds,
+minimum type size, page counts and blocked resource dependencies. A model cannot
+override mechanical failures. Each review records the artifact hash, rendered image
+hashes, provider/model, findings and limits. Review is performed again after a repair.
+
+The renderer runs in a cancellable subprocess, at most 40 seconds per attempt, and
+cannot fetch external or local resources. It supports at most 12 static pages on a
+1280x720 canvas. It approximates browser layout; it does not certify every viewport.
+Model review is labeled as such and is not independent verification or human approval.
+The selected model must support native tool submissions and image input for artifact
+review. Text-only models can still answer comments but cannot complete artifact production.
+If the repair still fails, the operation retains `candidate.html` and `candidate.reviews`
+for inspection without committing a revision. Imported artifacts remain unreviewed.
 
 ## Export and cleanup
 
@@ -110,10 +135,20 @@ provider may still be billed. There is no automatic publication or caller wake-u
 - Static previews suppress active content and external assets. Native text anchors
   are Unicode character offsets, scoped to an exact revision. No automatic anchor
   reassociation between revisions.
-- Semantic and rendered-quality review of generated stories are explicitly
-  `not_performed`; quote/reference integrity checks are narrower guarantees.
+- Semantic and static rendered-quality review are model judgments with recorded
+  limits. Imported artifacts still report these as `not_performed`.
 - `needs_input` is a visible clarification outcome. Reply on the same target with
   the missing context to create a new operation; no implicit model continuation.
 - One local host and a private loopback viewer; no remote multi-user service.
 - Settings and login UI deferred. Library/CLI provider selection is implemented.
 - macOS is the validated platform. Other platforms are not advertised yet.
+
+## Live quality evaluation
+
+`uv run python tests/evaluate_quality.py --allow-model --provider openai --store
+.work/evaluation --run-id unique-run` runs the historical bundle case study and metrics
+scenario. Prepare the selected provider first. This spends model tokens and can take
+up to ten minutes; it is separate from normal tests. Use a new run ID for new intent.
+Its report separates narrow deterministic checks (requested slide count and retained
+historical date/count) from the model's source and image review. A model pass alone is
+not a general quality benchmark. Raw results and review artifacts belong in `.work/`.

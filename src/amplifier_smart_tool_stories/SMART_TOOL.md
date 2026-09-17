@@ -16,6 +16,10 @@ requires:
     purpose: Needed for generation and intelligent comment responses; retained review works without it.
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
+  - name: pango
+    purpose: Native text layout for static rendered review of generated and revised artifacts.
+    optional: true
+    install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
 ---
 # Stories
 
@@ -40,6 +44,11 @@ failure; deterministic paths never initialize an agent. If native caches are man
 removed or invalidated, prepare again. Model execution uses the selected provider's
 native environment/OAuth credentials and sends the supplied story/source context to it.
 No fallback provider or network research occurs.
+
+Artifact production additionally needs Pango (on macOS: `brew install pango`).
+WeasyPrint and PDFium are packaged Python dependencies. No browser download or
+LibreOffice is required. Missing rendering prerequisites fail the operation; they
+are never installed during generation. Imports, reading and answers do not render.
 
 Providers: openai (OPENAI_API_KEY), anthropic (ANTHROPIC_API_KEY), gemini
 (GOOGLE_API_KEY or GEMINI_API_KEY), chatgpt (Amplifier's existing OAuth device-login
@@ -107,7 +116,8 @@ viewer = api.start_dashboard(story_id, revision_id)
 Each user comment consumes one operation allowance when queued. Typing/saving drafts
 never spends. A grant expires after one hour by default, at most 24 hours, and limits
 operations, time per operation and output tokens per call. Each operation uses at most
-two model calls: checked evidence extraction, then response/composition. It can answer,
+five model calls: evidence/planning, composition, rendered/source review, and if needed
+one repair and a fresh review. Answers and clarifications use at most two. It can answer,
 revise or ask for clarification. Clarifications are visible `needs_input` outcomes;
 submit a follow-up comment on the same anchor to provide more context. They are not
 automatically resumed. Grants are not dollar limits. No automatic retries occur.
@@ -118,8 +128,15 @@ explicitly for queued execution, or choose background/in_process at submission.
 Background workers survive caller exit; read operations never start workers.
 Provider preparation requires explicit setup. Model access requires `--model-env`.
 Sources remain identifiable by hash and evidence quotes are verified against supplied
-text. Semantic support and visual quality are reported as not performed; source-reference
-validation is not proof a claim is true. Generated outputs are drafts for review.
+text. New and revised artifacts require model review against sources and images of
+every static rendered page (maximum 12, 1280x720 canvas). Mechanical findings cannot
+be overridden by a model pass. Records identify exact HTML and rendered-page hashes;
+an edit invalidates the old review. Rendering is bounded to 40 seconds per attempt
+within the operation deadline, with external/file resource fetching disabled.
+Persistent review failure retains an unaccepted candidate on the failed operation,
+not a selected revision. Imports keep semantic/visual review as not_performed.
+Static WeasyPrint rendering approximates browser layout; model review is neither
+human approval nor independent factual verification. Generated outputs remain drafts.
 
 ## Capabilities
 

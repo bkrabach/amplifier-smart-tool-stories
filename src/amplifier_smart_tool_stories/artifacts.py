@@ -88,3 +88,38 @@ def evidence_checked(evidence, sources):
         )
         require(isinstance(fact.get("claim"), str) and fact["claim"], "Evidence needs a claim.")
     return evidence
+
+
+def source_excerpts(sources):
+    """Identify exact supplied paragraphs so models select references rather than retype quotes."""
+    import re
+
+    catalog, index = [], {}
+    for number, source in enumerate(sources):
+        excerpts = []
+        for match in re.finditer(r"\S[\s\S]*?(?=\n\s*\n|$)", source["content"]):
+            text = match.group()
+            for start in range(0, len(text), 2000):
+                key = f"s{number}-p{len(excerpts)}"
+                quote = text[start : start + 2000]
+                excerpts.append({"excerpt_id": key, "text": quote})
+                index[key] = {"source_id": source["id"], "quote": quote}
+        catalog.append({"id": source["id"], "name": source["name"], "excerpts": excerpts})
+    return catalog, index
+
+
+def selected_evidence(selections, index, sources):
+    require(
+        isinstance(selections, list) and len(selections) <= 12,
+        "Select at most 12 evidence references.",
+        "invalid_model_result",
+    )
+    evidence = []
+    for item in selections:
+        require(
+            isinstance(item, dict) and item.get("excerpt_id") in index,
+            "Evidence selected an unavailable excerpt.",
+            "invalid_model_result",
+        )
+        evidence.append({"id": item.get("id"), "claim": item.get("claim"), **index[item["excerpt_id"]]})
+    return evidence_checked(evidence, sources)

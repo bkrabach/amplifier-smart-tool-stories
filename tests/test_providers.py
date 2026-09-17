@@ -62,30 +62,34 @@ def test_runtime_cache_never_cold_prepares_or_activates(tmp_path, monkeypatch):
 
     from amplifier_smart_tool_stories import providers
 
-    mark = tmp_path / 'stories-openai-ready.json'
-    monkeypatch.setattr(providers, 'marker', lambda config: mark)
-    config = ProviderConfig('openai')
+    mark = tmp_path / "stories-openai-ready.json"
+    monkeypatch.setattr(providers, "marker", lambda config: mark)
+    config = ProviderConfig("openai")
     artifact = pickle.dumps(SimpleNamespace())
-    (tmp_path / 'prepared.pickle').write_bytes(artifact)
-    module = tmp_path / 'provider'
+    (tmp_path / "prepared.pickle").write_bytes(artifact)
+    module = tmp_path / "provider"
     module.mkdir()
-    mark.write_text(json.dumps({
-        'python_prefix': sys.prefix,
-        'artifact_sha256': hashlib.sha256(artifact).hexdigest(),
-        'module_paths': {'provider-openai': str(module)},
-    }))
+    mark.write_text(
+        json.dumps(
+            {
+                "python_prefix": sys.prefix,
+                "artifact_sha256": hashlib.sha256(artifact).hexdigest(),
+                "module_paths": {"provider-openai": str(module)},
+            }
+        )
+    )
     bundle = providers._load_local_runtime(config)
     assert bundle.resolver._activator is None
-    assert bundle.resolver.resolve('provider-openai').resolve() == module
+    assert bundle.resolver.resolve("provider-openai").resolve() == module
     module.rmdir()
-    with pytest.raises(StoriesError, match='missing or changed'):
+    with pytest.raises(StoriesError, match="missing or changed"):
         providers._load_local_runtime(config)
     module.mkdir()
-    (tmp_path / 'prepared.pickle').write_bytes(b'corrupt')
-    with pytest.raises(StoriesError, match='missing or changed'):
+    (tmp_path / "prepared.pickle").write_bytes(b"corrupt")
+    with pytest.raises(StoriesError, match="missing or changed"):
         providers._load_local_runtime(config)
     mark.unlink()
-    with pytest.raises(StoriesError, match='missing or changed'):
+    with pytest.raises(StoriesError, match="missing or changed"):
         providers._load_local_runtime(config)
 
 
@@ -94,15 +98,71 @@ def test_in_process_cli_reports_model_failure_nonzero(tmp_path):
     import subprocess
     import sys
 
-    env = {k: v for k, v in os.environ.items() if k not in ENV['openai']}
-    payload = {'title': 'Test', 'purpose': 'Explain', 'audience': 'Reader',
-               'sources': [{'id': 's', 'content': 'A supplied fact.'}],
-               'grant': {'timeout_seconds': 10}, 'request_id': 'missing-key'}
+    env = {k: v for k, v in os.environ.items() if k not in ENV["openai"]}
+    payload = {
+        "title": "Test",
+        "purpose": "Explain",
+        "audience": "Reader",
+        "sources": [{"id": "s", "content": "A supplied fact."}],
+        "grant": {"timeout_seconds": 10},
+        "request_id": "missing-key",
+    }
     result = subprocess.run(
-        [sys.executable, '-m', 'amplifier_smart_tool_stories', '--store', str(tmp_path),
-         '--provider', 'openai', '--model-env', '--execution', 'in_process',
-         'generate', '--input', json.dumps(payload)],
-        env=env, capture_output=True, text=True, timeout=20,
+        [
+            sys.executable,
+            "-m",
+            "amplifier_smart_tool_stories",
+            "--store",
+            str(tmp_path),
+            "--provider",
+            "openai",
+            "--model-env",
+            "--execution",
+            "in_process",
+            "generate",
+            "--input",
+            json.dumps(payload),
+        ],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=20,
     )
     assert result.returncode == 1
-    assert json.loads(result.stdout)['operation']['state'] == 'failed'
+    assert json.loads(result.stdout)["operation"]["state"] == "failed"
+
+
+def test_native_submission_uses_schema_and_rejects_missing_submission():
+    import asyncio
+    from types import SimpleNamespace
+
+    from amplifier_smart_tool_stories.providers import complete
+    from amplifier_smart_tool_stories.submissions import REVIEW
+
+    class Provider:
+        default_model = "test"
+        calls = []
+
+        async def complete(self, request):
+            self.calls.append(request)
+            return SimpleNamespace(
+                content=[],
+                usage=None,
+                tool_calls=[SimpleNamespace(name="submit_result", arguments={"submitted": True})],
+            )
+
+    p = Provider()
+    text, _ = asyncio.run(
+        complete(p, ProviderConfig("openai"), [{"role": "user", "content": "Review"}], 100, 10, schema=REVIEW)
+    )
+    assert json.loads(text) == {"submitted": True}
+    assert p.calls[0].tools[0].parameters == REVIEW
+    assert p.calls[0].tool_choice == "required"
+
+    async def missing(request):
+        return SimpleNamespace(content=[], usage=None, tool_calls=[])
+
+    p.complete = missing
+    with pytest.raises(StoriesError) as exc:
+        asyncio.run(complete(p, ProviderConfig("openai"), [], 100, 10, schema=REVIEW))
+    assert exc.value.code == "invalid_model_result"
