@@ -25,6 +25,32 @@ The result identifies the created artifacts, their supporting evidence, missing
 information and checks performed. The same documented promises govern the library,
 the CLI and any other adapter.
 
+Stories includes a built-in dashboard for reviewing and refining stories with a
+calling agent. A person can inspect the actual artifact, give feedback on an
+identified revision, explore its sources and review findings, return to earlier
+versions, and export the result they reviewed. Supported formats provide appropriate
+previews and make preview limitations visible. Provider/model settings and output
+preferences use the same public capabilities as the library and CLI.
+
+The dashboard is part of the product and optional to use. A caller may work headlessly,
+select the built-in dashboard, or provide its own presentation surface. Work begun
+headlessly can open in the dashboard without regeneration or conversation replay.
+The person and calling agent share the same story state: submitted feedback,
+answers and changes are observable to the caller; unsubmitted drafts remain distinct
+from instructions. Recording an action does not promise to wake the calling agent.
+Existing valid authority can cover requested refinement without repeated approval.
+
+An optional review overlay lets the person select material and leave a comment,
+or comment on the story overall. The caller can also highlight material and attach
+questions or explanations for the person. These annotations belong to shared review
+state, not the document, and are absent from artifact exports. Stories' internal
+intelligence interprets submitted comments in context and can answer, refine or ask
+for clarification within existing authority without a round trip through the caller.
+The person can keep reviewing while work proceeds; updates preserve their position,
+selection, open comment and unfinished typing. A new revision is quietly made
+available without forcing a disruptive refresh. The caller can observe the resulting
+comments, actions and revisions later.
+
 ## Principles
 
 ### 1. **Evidence sets the limits of the story.**
@@ -39,8 +65,9 @@ agents. Stories owns the research-to-artifact workflow and discloses its limits.
 
 ### 3. **The library is the product.**
 
-Every capability is callable without the command line. The CLI adapts inputs and
-outputs rather than owning hidden functionality.
+Every capability is callable without the command line or dashboard. Both adapt
+inputs and outputs rather than owning hidden functionality. Human participation
+and agent-driven work operate on the same identified stories and revisions.
 
 ### 4. **Model use is deliberate.**
 
@@ -49,9 +76,11 @@ model credentials. Missing configuration produces a remedy, not a disguised fall
 
 ### 5. **Creation does not imply publication.**
 
-Making a story does not open applications, modify unrelated repositories, install
-software or send content to an audience. Network research and model use have explicit
-scope; publication is a distinct decision.
+Making a story does not implicitly open applications, start a service, modify unrelated
+repositories, install software or send content to an audience. An explicitly selected
+dashboard can start or update within granted presentation scope; opening a viewer
+remains a separate choice. Network research and model use have explicit scope;
+publication is a distinct decision.
 
 ### 6. **Quality claims name their evidence.**
 
@@ -63,6 +92,14 @@ and visual review answer different questions and remain distinguishable.
 Stories works without assumptions about a caller's local paths, session layout
 or deployment site. Unsupported outcomes fail explicitly.
 
+### 8. **Review continues the same work.**
+
+Feedback targets what the person saw. Refinement preserves unaffected choices and
+earlier revisions, and export identifies the delivered version. Viewing retained
+artifacts requires no model credentials. Closing the viewer does not erase work
+or imply that execution has stopped; stopping releases owned live resources while
+preserving retained results for a later return.
+
 ## What this deliberately resists
 
 - A bag of converters presented as storytelling — synthesis is part of the product.
@@ -71,6 +108,7 @@ or deployment site. Unsupported outcomes fail explicitly.
 - Automatic deployment, PR creation or runtime installation hidden in generation.
 - Universal file conversion or support for every platform without verification.
 - Building a general-purpose agent platform instead of a storytelling tool.
+- Requiring a full document or slide editor before people can review and refine work.
 
 ## How you can tell it is working
 
@@ -80,7 +118,13 @@ or deployment site. Unsupported outcomes fail explicitly.
 - An application consumes the result without extracting paths from conversational prose.
 - An operator can inspect and check supported artifacts without model credentials.
 - A maintainer can distinguish verified support from planned capabilities.
+- A person reviews an artifact in the dashboard, submits targeted feedback, and the
+  calling agent continues from that exact revision without screen scraping.
+- A person returns to earlier work and exports the reviewed version without losing
+  revisions or accidentally applying an unsubmitted draft.
 
 ## Changelog
 
+- **2026-09-16** — Added the optional built-in review workspace, shared caller state,
+  provider settings, revision continuity and explicit presentation lifecycle.
 - **2026-09-09** — First draft; no lock or implementation claim.

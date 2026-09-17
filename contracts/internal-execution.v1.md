@@ -93,6 +93,10 @@ commands. Externally useful domain capabilities remain library-accessible.
    results. Runtime work does not implicitly install dependencies, open applications,
    change unrelated repositories, start services or publish content. Missing
    prerequisites return a remedy under the invocation contract.
+   The internal model does not gain presentation authority by generating content.
+   A caller-selected dashboard service is managed outside its tool scope under the
+   [dashboard contract](dashboard.v1.md); generated artifacts remain isolated from
+   workspace credentials and controls.
 
 ## Stories acceptance checks
 

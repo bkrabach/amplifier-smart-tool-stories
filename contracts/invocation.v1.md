@@ -60,8 +60,10 @@ that public boundary.
 8. **Writes and external actions stay within the requested operation.** Outputs go
    to selected destinations, state to platform user locations and temporary data to
    temporary directories. Creation does not auto-install, auto-open, commit, push,
-   publish or start a service, and leaves existing files intact unless overwrite
-   was explicitly permitted.
+   publish or implicitly start a service, and leaves existing files intact unless
+   overwrite was explicitly permitted. An explicitly selected dashboard may start
+   or reuse its service within granted presentation scope under the
+   [dashboard contract](dashboard.v1.md); opening a viewer is separately controlled.
 
 ## What v1 deliberately does NOT freeze
 
@@ -69,7 +71,9 @@ that public boundary.
   examples and the first capability contract establish their compatibility needs.
 - Provider list, dependency revision and supported platforms — promote when clean
   installation and runtime evidence establish a support matrix.
-- MCP, service or UI adapters — promote when an actual consumer requires one.
+- MCP, remote services or additional adapters beyond the built-in dashboard —
+  promote when an actual consumer requires one. Dashboard behavior is defined in
+  its contract; concrete implementation remains open.
 - Autonomous source connectors — promote when a source-specific permission and
   failure contract is proposed; this version does not require those connectors.
 
