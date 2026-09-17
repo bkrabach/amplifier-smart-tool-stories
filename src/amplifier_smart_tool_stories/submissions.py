@@ -36,3 +36,35 @@ REVIEW = obj({"semantic": SECTION, "visual": SECTION, "warnings": TEXTS})
 
 GENERATION = obj({**COMPOSITION["properties"], "action": {"type": "string", "enum": ["revise", "clarify"]}})
 REPAIR = obj({**COMPOSITION["properties"], "action": {"type": "string", "enum": ["revise"]}})
+
+DOCUMENT = obj(
+    {
+        "title": TEXT,
+        "subtitle": TEXT,
+        "blocks": {
+            "type": "array",
+            "items": obj(
+                {
+                    "id": TEXT,
+                    "kind": {"type": "string", "enum": ["heading", "paragraph", "quote", "list", "table"]},
+                    "text": TEXT,
+                    "items": TEXTS,
+                    "rows": {"type": "array", "items": TEXTS},
+                    "evidence_ids": TEXTS,
+                }
+            ),
+        },
+    }
+)
+DOCUMENT_COMPOSITION = obj(
+    {
+        "action": COMPOSITION["properties"]["action"],
+        "message": TEXT,
+        "document": DOCUMENT,
+        "limitations": TEXTS,
+    }
+)
+DOCUMENT_GENERATION = obj(
+    {**DOCUMENT_COMPOSITION["properties"], "action": GENERATION["properties"]["action"]}
+)
+DOCUMENT_REPAIR = obj({**DOCUMENT_COMPOSITION["properties"], "action": REPAIR["properties"]["action"]})

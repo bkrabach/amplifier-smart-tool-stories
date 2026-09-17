@@ -71,3 +71,56 @@ def test_owned_process_lifecycle_and_retention(tmp_path):
     assert viewer["url"].startswith("http://127.0.0.1:") and "#" in viewer["url"]
     assert api.stop_dashboard(viewer["service_id"])["status"] == "stopped"
     assert api.get_revision(created["story_id"], created["revision_id"])["html"].endswith("</html>")
+
+
+def test_document_binary_downloads_use_exact_format_and_scope(tmp_path):
+    import io
+    import zipfile
+
+    api = Stories(tmp_path)
+    document = {
+        "title": "Portable brief",
+        "subtitle": "",
+        "blocks": [
+            {
+                "id": "body",
+                "kind": "paragraph",
+                "text": "Retain this text.",
+                "items": [],
+                "rows": [],
+                "evidence_ids": [],
+            }
+        ],
+    }
+    r = api.create_document("Brief", document, "doc")
+    server = Dashboard(api, r["story_id"])
+    thread = threading.Thread(target=server.serve)
+    thread.start()
+    try:
+        with post(server, "download", {"revision_id": r["revision_id"], "format": "docx"}) as response:
+            assert "story.docx" in response.headers["Content-Disposition"]
+            assert "wordprocessingml" in response.headers["Content-Type"]
+            with zipfile.ZipFile(io.BytesIO(response.read())) as archive:
+                assert b"Retain this text" in archive.read("word/document.xml")
+        with post(server, "download", {"revision_id": r["revision_id"], "format": "pdf"}) as response:
+            assert response.read().startswith(b"%PDF")
+            assert "story.pdf" in response.headers["Content-Disposition"]
+        with pytest.raises(urllib.error.HTTPError):
+            post(server, "download", {"revision_id": r["revision_id"], "format": "pptx"})
+    finally:
+        server.server.shutdown()
+        thread.join(5)
+
+
+def test_dashboard_control_bindings_have_unique_elements():
+    import re
+    from importlib.resources import files
+
+    from bs4 import BeautifulSoup
+
+    resources = files("amplifier_smart_tool_stories").joinpath("resources")
+    html = BeautifulSoup(resources.joinpath("dashboard.html").read_text(), "html.parser")
+    ids = [n["id"] for n in html.select("[id]")]
+    assert len(ids) == len(set(ids))
+    required = set(re.findall(r'\$\("([^"\n]+)"\)', resources.joinpath("dashboard.js").read_text()))
+    assert required <= set(ids), required - set(ids)

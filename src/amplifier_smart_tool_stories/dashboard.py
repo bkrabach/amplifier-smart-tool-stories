@@ -30,7 +30,13 @@ class Dashboard:
                 pass  # Access logs must not collect bearer credentials or material.
 
             def send(self, status, payload, mime="application/json", attachment=False):
-                raw = payload.encode() if isinstance(payload, str) else json.dumps(payload).encode()
+                raw = (
+                    payload
+                    if isinstance(payload, bytes)
+                    else payload.encode()
+                    if isinstance(payload, str)
+                    else json.dumps(payload).encode()
+                )
                 self.send_response(status)
                 self.send_header("Content-Type", mime + "; charset=utf-8")
                 self.send_header("Content-Length", str(len(raw)))
@@ -42,7 +48,14 @@ class Dashboard:
                     "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self' about:; img-src data:; frame-ancestors 'none'",
                 )
                 if attachment:
-                    self.send_header("Content-Disposition", 'attachment; filename="story.html"')
+                    extension = (
+                        "pdf"
+                        if mime == "application/pdf"
+                        else "docx"
+                        if "wordprocessingml" in mime
+                        else "html"
+                    )
+                    self.send_header("Content-Disposition", f'attachment; filename="story.{extension}"')
                 self.end_headers()
                 self.wfile.write(raw)
 
@@ -60,6 +73,7 @@ class Dashboard:
                     "/": ("dashboard.html", "text/html"),
                     "/app.js": ("dashboard.js", "text/javascript"),
                     "/style.css": ("dashboard.css", "text/css"),
+                    "/document-view.js": ("document-view.js", "text/javascript"),
                     "/bridge.js": ("bridge.js", "text/plain"),
                 }
                 if path in assets:
@@ -94,8 +108,14 @@ class Dashboard:
                         threading.Thread(target=owner.server.shutdown, daemon=True).start()
                         return
                     elif path == "/api/download":
-                        rev = owner.api.get_revision(owner.story_id, data["revision_id"])
-                        self.send(200, rev["html"], "text/html", attachment=True)
+                        import base64
+
+                        result = owner.api.get_export(
+                            owner.story_id, data["revision_id"], data.get("format", "html")
+                        )
+                        self.send(
+                            200, base64.b64decode(result["data_base64"]), result["mime_type"], attachment=True
+                        )
                         return
                     else:
                         name = path.removeprefix("/api/").replace("-", "_")

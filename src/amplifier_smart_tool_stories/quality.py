@@ -11,7 +11,7 @@ from .artifacts import digest, parse_html
 from .errors import StoriesError, require
 
 
-async def render(html, timeout):
+async def render(html, timeout, include_pdf=False):
     parse_html(html)
     env = os.environ.copy()
     # Standard macOS native library locations; never a development checkout.
@@ -30,7 +30,8 @@ async def render(html, timeout):
     )
     try:
         stdout, _ = await asyncio.wait_for(
-            process.communicate(json.dumps({"html": html}).encode()), min(40, timeout)
+            process.communicate(json.dumps({"html": html, "include_pdf": include_pdf}).encode()),
+            min(40, timeout),
         )
         result = json.loads(stdout)
         if process.returncode or "error" in result:
@@ -52,7 +53,7 @@ def record(html, rendered, verdict, provenance):
         "artifact_sha256": digest(html),
         "method": "model_review",
         "reviewer": provenance,
-        "renderer": "WeasyPrint static 1280x720 / PDFium rasterization",
+        "renderer": rendered.get("renderer", "WeasyPrint static 1280x720 / PDFium rasterization"),
         "pages": [i["sha256"] for i in rendered["images"]],
         "limits": [
             "Static rendering approximates browser layout.",

@@ -127,7 +127,14 @@ class Stories:
                 return revision
         raise StoriesError("not_found", "Revision does not belong to this story.")
 
-    def _new_revision(self, story, html, base=None, evidence=None, limitations=None, origin="imported"):
+    def _new_revision(
+        self, story, html, base=None, evidence=None, limitations=None, origin="imported", document=None
+    ):
+        if document is not None:
+            from .documents import checked, render_document
+
+            document = checked(document, evidence or [])
+            require(html == render_document(document, evidence or []), "Document and HTML disagree.")
         parse_html(html)
         evidence = evidence_checked(evidence or [], story["sources"])
         revision = {
@@ -137,6 +144,8 @@ class Stories:
             "html": html,
             "sha256": digest(html),
             "format": "html",
+            "kind": "document" if document is not None else "presentation",
+            **({"document": document} if document is not None else {}),
             "origin": origin,
             "evidence": evidence,
             "limitations": limitations or [],
@@ -154,12 +163,23 @@ class Stories:
         return revision
 
     def create_story(
-        self, title, html, request_id, sources=None, purpose="Review supplied material", audience="Reader"
+        self,
+        title,
+        html,
+        request_id,
+        sources=None,
+        purpose="Review supplied material",
+        audience="Reader",
+        document=None,
     ):
         """Import supplied HTML; retain exact bytes for export, with an isolated static preview."""
         require(isinstance(title, str) and title.strip() and len(title) <= 300, "Supply a short title.")
         require(isinstance(purpose, str) and isinstance(audience, str), "Purpose and audience must be text.")
         supplied = self._sources(sources or [])
+        if document is not None:
+            from .documents import render_document
+
+            html = render_document(document)
         parse_html(html)
 
         def action(db):
@@ -177,12 +197,26 @@ class Stories:
                 "latest_revision": None,
                 "feedback_grant": None,
             }
-            rev = self._new_revision(story, html, limitations=["Imported content has not been fact-checked."])
+            rev = self._new_revision(
+                story, html, limitations=["Imported content has not been fact-checked."], document=document
+            )
+            story["kind"] = rev["kind"]
             self.store.put(db, "stories", story)
             self.store.event(db, story["id"], "story_created", revision_id=rev["id"])
             return {"status": "succeeded", "story_id": story["id"], "revision_id": rev["id"]}
 
-        return self._mutation(request_id, "create_story", [title, html, supplied, purpose, audience], action)
+        return self._mutation(
+            request_id,
+            "create_story",
+            [title, document if document is not None else html, supplied, purpose, audience],
+            action,
+        )
+
+    def create_document(
+        self, title, document, request_id, sources=None, purpose="Review supplied material", audience="Reader"
+    ):
+        """Import document structure without model use; reviewed facts and citations require generation."""
+        return self.create_story(title, "", request_id, sources, purpose, audience, document=document)
 
     def list_stories(self):
         """List retained story identities without artifacts or model use."""
@@ -199,6 +233,7 @@ class Stories:
             story = self.store.get(db, "stories", story_id)
         for rev in story["revisions"]:
             rev.pop("html")
+            rev.pop("document", None)
         return story
 
     def get_revision(self, story_id, revision_id):
@@ -214,6 +249,7 @@ class Stories:
             "revision_id": revision_id,
             "html": html,
             "elements": anchors,
+            "kind": rev.get("kind", "presentation"),
             "limitations": [
                 "Static preview: source scripts, forms and external resources are disabled.",
                 "Text offsets count Unicode characters within an identified element.",
@@ -344,8 +380,12 @@ class Stories:
             self.store.put(db, "stories", story)
             return {"status": "saved", "sequence": sequence}
 
-    def generate(self, title, purpose, audience, sources, grant, request_id):
-        """Generate and review an HTML story; at most five model calls including one repair."""
+    def generate(self, title, purpose, audience, sources, grant, request_id, kind="presentation"):
+        """Generate a presentation or structured document; one repair, up to five presentation or eleven document model calls."""
+        require(
+            isinstance(kind, str) and kind in {"presentation", "document"},
+            "Kind must be presentation or document.",
+        )
         require(
             all(isinstance(x, str) and x.strip() for x in (title, purpose, audience)),
             "Title, purpose, audience required.",
@@ -358,6 +398,7 @@ class Stories:
             story = {
                 "id": identity("story"),
                 "title": title,
+                "kind": kind,
                 "purpose": purpose,
                 "audience": audience,
                 "created_at": now(),
@@ -374,7 +415,11 @@ class Stories:
             return {"status": "queued", "story_id": story["id"], "operation_id": op}
 
         return self._mutation(
-            request_id, "generate", [title, purpose, audience, supplied, grant, self.config.public()], action
+            request_id,
+            "generate",
+            [title, purpose, audience, supplied, grant, self.config.public()]
+            + ([kind] if kind != "presentation" else []),
+            action,
         )
 
     def get_operation(self, operation_id):
@@ -467,6 +512,8 @@ class Stories:
                 if result["action"] == "revise":
                     from .quality import validate_record
 
+                    if story.get("kind") == "document":
+                        require(result.get("document") is not None, "Document structure is required.")
                     quality = result.get("quality_review")
                     if self.intelligence is None or quality is not None:
                         validate_record(result.get("html"), quality)
@@ -479,7 +526,13 @@ class Stories:
                         "Limitations must be text entries.",
                     )
                     rev = self._new_revision(
-                        story, result.get("html"), op["revision_id"], evidence, limitations, "model"
+                        story,
+                        result.get("html"),
+                        op["revision_id"],
+                        evidence,
+                        limitations,
+                        "model",
+                        document=result.get("document"),
                     )
                     if quality is not None:
                         rev["quality_review"] = quality
@@ -565,16 +618,25 @@ class Stories:
             "history_gap": False,
         }
 
-    def export(self, story_id, revision_id, output_path):
-        """Write exact immutable HTML, excluding review overlays. Refuses to overwrite existing files."""
-        rev = self.get_revision(story_id, revision_id)
+    def get_export(self, story_id, revision_id, format="html"):
+        """Get identified HTML or a distinct document PDF/Word export as base64, with format-specific limits."""
+        from .exports import artifact
+
+        return artifact(self.get_revision(story_id, revision_id), format)
+
+    def export(self, story_id, revision_id, output_path, format="html"):
+        """Write the chosen revision in an explicit format, excluding annotations; never overwrite."""
+        import base64
+
         path = Path(output_path).expanduser().resolve()
+        require(not path.exists(), "Output already exists; choose a new destination.", "output_exists")
+        result = self.get_export(story_id, revision_id, format)
         try:
-            with path.open("x", encoding="utf-8", newline="") as file:
-                file.write(rev["html"])
+            with path.open("xb") as file:
+                file.write(base64.b64decode(result.pop("data_base64")))
         except FileExistsError:
             raise StoriesError("output_exists", "Output already exists; choose a new destination.") from None
-        return {"status": "succeeded", "path": str(path), "revision_id": revision_id, "sha256": rev["sha256"]}
+        return {"status": "succeeded", "path": str(path), **result}
 
     def provider_settings(self):
         """Read redacted provider configuration and setup instructions without booting a model."""
@@ -646,6 +708,7 @@ class Stories:
 CAPABILITIES = [
     "manifest",
     "create_story",
+    "create_document",
     "generate",
     "list_stories",
     "get_story",
@@ -661,6 +724,7 @@ CAPABILITIES = [
     "run_operation",
     "cancel_operation",
     "export",
+    "get_export",
     "provider_settings",
     "configure_provider",
     "prepare_runtime",

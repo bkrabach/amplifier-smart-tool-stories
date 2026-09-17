@@ -3,10 +3,10 @@ smart_tool_format: 1
 name: amplifier-smart-tool-stories
 version: 0.1.0
 description: >-
-  Create evidence-based HTML stories and review them with agent highlights and
+  Create evidence-based presentations and documents with agent highlights and
   anchored comments. Use for source-backed communication and shared review.
 use_cases:
-  - Turn supplied evidence into an HTML presentation
+  - Turn supplied evidence into an HTML presentation or structured document
   - Review a story with a person and highlight material that needs attention
   - Answer or act on anchored feedback while preserving the reader's place
 platforms:
@@ -25,8 +25,9 @@ requires:
 
 Create evidence-based HTML stories and review them with a person. The Python
 library is the product; the `stories` CLI and optional local dashboard share its
-state. This first slice supports HTML import, source-to-HTML generation, and
-anchored review. It does not yet produce PowerPoint, Word, PDF or spreadsheets.
+state. It supports HTML presentations, structured documents and anchored review.
+Documents export as HTML, Letter PDF or editable Word; PowerPoint and spreadsheets
+remain deferred.
 
 ## Install and prerequisites
 
@@ -116,20 +117,21 @@ viewer = api.start_dashboard(story_id, revision_id)
 Each user comment consumes one operation allowance when queued. Typing/saving drafts
 never spends. A grant expires after one hour by default, at most 24 hours, and limits
 operations, time per operation and output tokens per call. Each operation uses at most
-five model calls: evidence/planning, composition, rendered/source review, and if needed
-one repair and a fresh review. Answers and clarifications use at most two. It can answer,
+five presentation model calls, or eleven for documents reviewed in batches of up to
+three pages: evidence/planning, composition, source/page review, and at most one repair
+with fresh review. Answers and clarifications use at most two. It can answer,
 revise or ask for clarification. Clarifications are visible `needs_input` outcomes;
 submit a follow-up comment on the same anchor to provide more context. They are not
 automatically resumed. Grants are not dollar limits. No automatic retries occur.
 
 To generate a new story, call `generate` with title, purpose, audience, source objects,
-grant and request_id. The receipt identifies story and operation. Call `run-operation`
+grant and request_id. Optional kind is presentation (default) or document. The receipt identifies story and operation. Call `run-operation`
 explicitly for queued execution, or choose background/in_process at submission.
 Background workers survive caller exit; read operations never start workers.
 Provider preparation requires explicit setup. Model access requires `--model-env`.
 Sources remain identifiable by hash and evidence quotes are verified against supplied
 text. New and revised artifacts require model review against sources and images of
-every static rendered page (maximum 12, 1280x720 canvas). Mechanical findings cannot
+every static rendered page (maximum 12, 1280x720 presentations or Letter documents). Mechanical findings cannot
 be overridden by a model pass. Records identify exact HTML and rendered-page hashes;
 an edit invalidates the old review. Rendering is bounded to 40 seconds per attempt
 within the operation deadline, with external/file resource fetching disabled.
@@ -144,7 +146,8 @@ All exist as methods on Stories (hyphens become underscores):
 
 - `manifest`: structured capability names, signatures and model-use classifications.
 - `create-story`: import supplied HTML with title, optional sources, purpose and audience.
-- `generate`: queue a new HTML story from supplied sources with a finite grant.
+- `create-document`: import uncited title/subtitle/blocks structure without model use.
+- `generate`: queue a presentation or document from supplied sources with a finite grant.
 - `list-stories`, `get-story`: retained identities, sources, revisions, drafts and annotations.
 - `get-revision`: exact immutable artifact, evidence, hash, limitations and check statuses.
 - `get-preview`: isolated static HTML and revision-local element/text anchor catalog.
@@ -158,7 +161,9 @@ All exist as methods on Stories (hyphens become underscores):
   reported interrupted/uncertain; cancel it before explicitly creating replacement work.
 - `run-operation`: claim and execute one queued operation exactly once.
 - `cancel-operation`: prevent late commits and cooperatively stop active model work.
-- `export`: write exact named revision to a new output_path; never overwrite existing files.
+- `export`: write a named revision to a new output_path; format html (default), pdf or docx.
+- `get-export`: base64 bytes, MIME type, revision and source/output hashes, checks and limits.
+  PDF/Word support structured documents only; no arbitrary HTML conversion.
 - `provider-settings`: redacted effective settings and credential readiness.
 - `configure-provider`: process-local future settings; no credential storage or spending.
 - `prepare-runtime`: explicit dependency preparation, network/package/cache writes.
@@ -185,5 +190,31 @@ State and events are retained without automatic expiration in the chosen local s
 No automatic publication, notification, caller wake-up, repository access, commits or pushes.
 Only supplied content is available to intelligence. HTML with external assets or source
 scripts may preview differently; exported originals may contain their original active
-content. Non-HTML authoring/conversion, independent semantic/visual grading, production
-brand systems and settings UI remain outside this initial slice.
+content. Independent semantic/visual grading, production brand systems, images/equations,
+general conversion and settings UI remain outside this slice.
+
+
+## Structured documents
+
+Generate with `kind="document"`. The retained `get-revision` result includes `document`:
+`{title, subtitle, blocks}`. Each block has `{id, kind, text, items, rows, evidence_ids}`;
+kinds are heading, paragraph, quote, list, table. IDs are unique safe identifiers and
+remain stable on unaffected blocks. Unused arrays are empty. Paragraphs/quotes have
+at most 1400 characters; lists eight items (300 characters each); tables eight equal
+rows, five columns, 160-character cells and 1600 characters total. Maximum 100 blocks.
+The library validates evidence references and renders self-contained HTML. Sources,
+uncertainty and citations remain visible. Direct import accepts uncited structure;
+it does not claim factual review. Inspect the current signature with capability help.
+
+Review defaults to continuous flow, with paginated view and zoom/fit width behind a
+small hover/click/focus reveal tab. User and agent comment navigation shares the same
+state. Comments anchor in available whitespace or float; never change material width.
+View changes preserve the reading passage and drafts. An offscreen anchored composer
+closes without discarding its draft. New revisions remain explicitly selected.
+
+PDF exports use the retained HTML and checked Letter layout. Word exports use native
+editable paragraphs, lists and tables; python-docx is packaged. No LibreOffice or
+external skill checkout is a product dependency. Browser pagination is approximate;
+Word line/page breaks vary with renderer/fonts. Export limitations and unperformed
+visual checks are explicit. Inspect the actual target before delivery, rather than
+assuming HTML review certifies another format. Annotations never enter exports.

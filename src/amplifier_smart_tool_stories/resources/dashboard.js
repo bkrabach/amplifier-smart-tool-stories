@@ -10,6 +10,11 @@ let story,
   revision,
   channel,
   bridge,
+  documentBridge,
+  documentKind = false,
+  documentView = { mode: "continuous", zoom: 1, fit: false },
+  commentIndex = -1,
+  anchorRect = null,
   selection = { kind: "story" },
   active = null,
   candidate = null,
@@ -53,7 +58,10 @@ function send(type, data = {}) {
 }
 const notes = () => story.annotations.filter((n) => n.revision_id === revision);
 function view() {
-  localStorage.setItem(viewKey + story.id, JSON.stringify({ revision, slide }));
+  localStorage.setItem(
+    viewKey + story.id,
+    JSON.stringify({ revision, slide, documentView }),
+  );
 }
 function draftIdentity() {
   const { kind, element, start, end } = selection;
@@ -70,6 +78,7 @@ function closeComment() {
   clearTimeout(saveTimer);
   $("composer").hidden = true;
   $("quick").hidden = true;
+  send("track-anchor", { anchor: null });
   return saveDraft();
 }
 async function saveDraft() {
@@ -79,18 +88,17 @@ async function saveDraft() {
     anchor = structuredClone(selection),
     rev = revision,
     seq = ++sequence;
-  localStorage.setItem(
-    draftKey + story.id,
-    JSON.stringify({
-      id,
-      revision: rev,
-      anchor,
-      text,
-      sequence: seq,
-      active,
-      open: !$("composer").hidden,
-    }),
-  );
+  const cachedDraft = {
+    id,
+    revision: rev,
+    anchor,
+    text,
+    sequence: seq,
+    active,
+    open: !$("composer").hidden,
+  };
+  localStorage.setItem(draftKey + story.id, JSON.stringify(cachedDraft));
+  localStorage.setItem(draftKey + story.id + id, JSON.stringify(cachedDraft));
   $("saved").textContent = "Saving…";
   try {
     const result = await api("save-draft", {
@@ -113,6 +121,7 @@ async function openComment(anchor, note = null) {
   selection = anchor;
   $("composer").dataset.anchor = JSON.stringify(anchor);
   active = note?.id || null;
+  anchorRect = null;
   draftId = draftIdentity();
   $("composer").hidden = false;
   $("quick").hidden = true;
@@ -121,7 +130,7 @@ async function openComment(anchor, note = null) {
   const entry = story.drafts[draftId];
   let cached;
   try {
-    cached = JSON.parse(localStorage.getItem(draftKey + story.id));
+    cached = JSON.parse(localStorage.getItem(draftKey + story.id + draftId));
   } catch {}
   $("comment").value =
     (cached?.revision === revision && sameAnchor(cached.anchor, anchor)
@@ -133,7 +142,8 @@ async function openComment(anchor, note = null) {
     (anchor.kind === "story" ? "Whole story" : "Selected element");
   $("outcome").textContent = "";
   renderMessages();
-  $("comment").focus();
+  send("track-anchor", { anchor });
+  $("comment").focus({ preventScroll: true });
   await saveDraft();
 }
 function renderMessages() {
@@ -168,6 +178,15 @@ function renderMessages() {
       (n.error ? " · " + n.error.message + " " + n.error.remedy : "");
 }
 function update() {
+  const allNotes = notes();
+  if (documentKind && !$("composer").hidden)
+    send("track-anchor", { anchor: selection });
+  $("previousComment").disabled = $("nextComment").disabled = !allNotes.length;
+  $("commentPosition").textContent = allNotes.length
+    ? commentIndex >= 0 && allNotes[commentIndex]
+      ? `${commentIndex + 1} / ${allNotes.length} · ${allNotes[commentIndex].author === "agent" ? "Agent" : "You"}`
+      : `${allNotes.length} comment${allNotes.length === 1 ? "" : "s"}`
+    : "No comments";
   const agents = notes().filter((n) => n.author === "agent");
   $("agent").hidden = !agents.length;
   $("agent").textContent = `Agent highlights · ${agents.length}`;
@@ -218,6 +237,13 @@ function update() {
 async function loadRevision(id, initialSlide = 0) {
   if (!$("composer").hidden) await saveDraft();
   const p = await api("get-preview", { revision_id: id });
+  documentKind = p.kind === "document";
+  document.body.classList.toggle("document-review", documentKind);
+  $("documentTools").hidden = !documentKind;
+  commentIndex = -1;
+  $("exportFormat").hidden = !documentKind;
+  $("exportFormat").value = "html";
+  $("exportLimit").textContent = "";
   revision = id;
   slide = initialSlide;
   channel = requestId();
@@ -231,8 +257,8 @@ async function loadRevision(id, initialSlide = 0) {
   let html = p.html.replace(/<head[^>]*>/i, (m) => m + csp);
   if (!/<head/i.test(html))
     html = html.replace(/<html[^>]*>/i, (m) => m + "<head>" + csp + "</head>");
-  const code = bridge
-    .replace("__CHANNEL__", JSON.stringify(channel))
+  const code = (bridge + (documentKind ? documentBridge : ""))
+    .replaceAll("__CHANNEL__", JSON.stringify(channel))
     .replace("__SLIDE__", String(slide));
   html = html.replace(
     /<\/body>/i,
@@ -249,6 +275,32 @@ async function choose(id) {
 window.addEventListener("message", (e) => {
   if (e.source !== frame.contentWindow || e.data?.channel !== channel) return;
   const m = e.data;
+  if (m.type === "document-layout") {
+    send("annotations", { annotations: notes() });
+    if (m.missingPassage) {
+      $("connection").textContent =
+        "Previous passage is absent in this version";
+    }
+    documentView = {
+      mode: m.mode,
+      zoom: m.zoom,
+      fit: m.fit,
+      passage: m.passage,
+    };
+    $("documentMode").value = m.mode;
+    $("zoomLabel").textContent = Math.round(m.zoom * 100) + "%";
+    view();
+  }
+  if (m.type === "document-position") {
+    documentView.passage = m.passage;
+    anchorRect = m.rect;
+    if (m.anchor && sameAnchor(m.anchor, selection)) placeComment();
+    view();
+  }
+  if (m.type === "dismiss-selection") {
+    $("quick").hidden = true;
+    candidate = null;
+  }
   if (m.type === "selection" && visible) {
     candidate = m.anchor;
     const existing = notes().find((n) => sameAnchor(n.anchor, candidate));
@@ -282,6 +334,7 @@ window.addEventListener("message", (e) => {
   }
   if (m.type === "ready") {
     send("overlay", { visible, annotations: notes() });
+    if (documentKind) send("document-view", documentView);
     let cached;
     try {
       cached = JSON.parse(localStorage.getItem(draftKey + story.id));
@@ -356,6 +409,7 @@ $("overlay").onclick = async () => {
   visible = !visible;
   document.body.classList.toggle("review-hidden", !visible);
   $("overlay").textContent = visible ? "Hide review" : "Show review";
+  $("documentOverlay").textContent = $("overlay").textContent;
   if (!visible) {
     await saveDraft();
     $("composer").hidden = true;
@@ -373,7 +427,18 @@ $("closeDetails").onclick = () => {
 };
 $("available").onclick = () => choose(story.latest_revision).catch(error);
 $("versions").onchange = (e) => choose(e.target.value).catch(error);
+$("exportFormat").onchange = () => {
+  $("exportLimit").textContent =
+    $("exportFormat").value === "docx"
+      ? "Editable Word. Page breaks may differ; inspect in Word before delivery."
+      : $("exportFormat").value === "pdf"
+        ? "Letter PDF. Browser page breaks are approximate; inspect the exported PDF."
+        : "Exact retained HTML, without review annotations.";
+};
 $("export").onclick = async () => {
+  const exportFormat = $("exportFormat").value;
+  $("export").disabled = true;
+  $("export").textContent = "Exporting…";
   try {
     const r = await fetch("/api/download", {
       method: "POST",
@@ -381,23 +446,33 @@ $("export").onclick = async () => {
         Authorization: "Bearer " + token,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ revision_id: revision }),
+      body: JSON.stringify({
+        revision_id: revision,
+        format: exportFormat,
+      }),
     });
-    if (!r.ok) throw Error("Export failed");
+    if (!r.ok) {
+      const failure = await r.json();
+      throw Error(failure.error?.message || "Export failed");
+    }
     const url = URL.createObjectURL(await r.blob());
     const a = document.createElement("a");
     a.href = url;
-    a.download = story.title.replace(/[^a-z0-9 -]/gi, "") + ".html";
+    a.download = story.title.replace(/[^a-z0-9 -]/gi, "") + "." + exportFormat;
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (e) {
     error(e);
+  } finally {
+    $("export").disabled = false;
+    $("export").textContent = "Export this version";
   }
 };
 async function boot() {
   if (!token)
     throw Error("Open the private viewer URL returned by start-dashboard.");
   bridge = await (await fetch("/bridge.js")).text();
+  documentBridge = await (await fetch("/document-view.js")).text();
   const initial = await api("bootstrap");
   story = initial.story;
   $("title").textContent = story.title;
@@ -405,6 +480,7 @@ async function boot() {
   try {
     saved = JSON.parse(localStorage.getItem(viewKey + story.id));
   } catch {}
+  if (saved?.documentView) documentView = saved.documentView;
   const id = story.revisions.some((r) => r.id === saved?.revision)
     ? saved.revision
     : initial.revision_id || story.selected_revision;
@@ -426,4 +502,105 @@ async function boot() {
     }
   }, 1500);
 }
+function placeComment() {
+  if (!documentKind || $("composer").hidden) return;
+  const box = $("composer"),
+    r = anchorRect;
+  if (selection.kind !== "story" && r && !r.visible) {
+    closeComment().catch(error);
+    return;
+  }
+  const width = box.offsetWidth,
+    height = box.offsetHeight;
+  // Use existing whitespace only. The document iframe and its width never change.
+  let left = innerWidth - width - 18;
+  if (r && innerWidth - r.paperRight > width + 28) left = r.paperRight + 14;
+  else if (r && r.paperLeft > width + 28) left = r.paperLeft - width - 14;
+  box.style.left = Math.max(12, Math.min(innerWidth - width - 12, left)) + "px";
+  box.style.right = "auto";
+  box.style.bottom = "auto";
+  box.style.top =
+    Math.max(70, Math.min(innerHeight - height - 18, r?.y || 110)) + "px";
+}
+new ResizeObserver(placeComment).observe($("composer"));
+let toolbarTimer,
+  suppressReveal = false;
+const tools = $("documentTools"),
+  panel = $("viewTools");
+function revealToolbar() {
+  if (suppressReveal) return;
+  clearTimeout(toolbarTimer);
+  panel.hidden = false;
+  $("revealTools").setAttribute("aria-expanded", "true");
+}
+function hideToolbar() {
+  panel.hidden = true;
+  $("revealTools").setAttribute("aria-expanded", "false");
+}
+function scheduleHide() {
+  clearTimeout(toolbarTimer);
+  toolbarTimer = setTimeout(() => {
+    if (!tools.matches(":hover") && !tools.contains(document.activeElement))
+      hideToolbar();
+  }, 650);
+}
+tools.onpointerenter = revealToolbar;
+tools.onpointerleave = () => {
+  suppressReveal = false;
+  scheduleHide();
+};
+tools.onfocusin = revealToolbar;
+tools.onfocusout = scheduleHide;
+$("revealTools").onclick = () => {
+  suppressReveal = false;
+  revealToolbar();
+};
+$("hideTools").onclick = () => {
+  suppressReveal = true;
+  hideToolbar();
+  $("revealTools").focus({ preventScroll: true });
+};
+document.addEventListener("pointerdown", (e) => {
+  if (!e.target.closest("#quick")) {
+    $("quick").hidden = true;
+    candidate = null;
+    send("dismiss-selection");
+  }
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") {
+    $("quick").hidden = true;
+    candidate = null;
+    send("dismiss-selection");
+  }
+  if (e.key === "Escape" && !panel.hidden) {
+    suppressReveal = true;
+    hideToolbar();
+    $("revealTools").focus({ preventScroll: true });
+  }
+});
+$("documentMode").onchange = (e) =>
+  send("document-view", { mode: e.target.value });
+$("zoomOut").onclick = () =>
+  send("document-view", { zoom: Math.max(0.35, documentView.zoom - 0.1) });
+$("zoomIn").onclick = () =>
+  send("document-view", { zoom: Math.min(2, documentView.zoom + 0.1) });
+$("fitWidth").onclick = () => send("document-view", { fit: true });
+$("documentOverall").onclick = () =>
+  openComment({ kind: "story" }).catch(error);
+$("documentOverlay").onclick = () => $("overlay").click();
+$("documentDetails").onclick = () => {
+  $("details").hidden = !$("details").hidden;
+};
+function nextComment(delta) {
+  const all = notes();
+  if (!all.length) return;
+  commentIndex = (commentIndex + delta + all.length) % all.length;
+  const n = all[commentIndex];
+  send("reveal", { anchor: n.anchor });
+  openComment(n.anchor, n).catch(error);
+  update();
+}
+$("previousComment").onclick = () => nextComment(-1);
+$("nextComment").onclick = () => nextComment(1);
 boot().catch(error);

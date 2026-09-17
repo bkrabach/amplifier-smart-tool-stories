@@ -1,6 +1,6 @@
 # Using Stories
 
-This is the first implementation slice: HTML generation/import and shared review.
+Stories supports HTML presentations and structured documents with shared review.
 The [installed operating guide](../src/amplifier_smart_tool_stories/SMART_TOOL.md)
 is the complete CLI/library reference. The broader contracts remain the product
 requirements; this release does not claim full conformance to all of them.
@@ -78,7 +78,8 @@ viewer = api.start_dashboard(story, revision)
 
 Submitted comments queue bounded model responses automatically. Answers and
 clarifications use at most two calls. Artifact production adds review against sources
-and rendered images, with at most one repair and fresh review: five calls total.
+and rendered images, with at most one repair and fresh review: five calls for presentations. Documents review batches of up to three pages, with
+at most eleven calls including one repair.
 All stages share the operation's time allowance. User drafts and caller highlights
 never execute a model. Model settings are captured at operation creation; changing
 settings later does not reroute existing work. No credentials are written to story
@@ -108,7 +109,7 @@ hashes, provider/model, findings and limits. Review is performed again after a r
 
 The renderer runs in a cancellable subprocess, at most 40 seconds per attempt, and
 cannot fetch external or local resources. It supports at most 12 static pages on a
-1280x720 canvas. It approximates browser layout; it does not certify every viewport.
+1280x720 presentation canvas or Letter document pages. It approximates browser layout; it does not certify every viewport.
 Model review is labeled as such and is not independent verification or human approval.
 The selected model must support native tool submissions and image input for artifact
 review. Text-only models can still answer comments but cannot complete artifact production.
@@ -130,7 +131,8 @@ provider may still be billed. There is no automatic publication or caller wake-u
 
 ## Current limits
 
-- HTML only; other formats and conversion are not yet implemented.
+- HTML presentations and structured documents. Document PDF and editable Word exports
+  are separate outputs with explicit layout limits. PowerPoint and spreadsheet work remain deferred.
 - Review sources are supplied text; no repository/session/network research connectors.
 - Static previews suppress active content and external assets. Native text anchors
   are Unicode character offsets, scoped to an exact revision. No automatic anchor
@@ -152,3 +154,55 @@ up to ten minutes; it is separate from normal tests. Use a new run ID for new in
 Its report separates narrow deterministic checks (requested slide count and retained
 historical date/count) from the model's source and image review. A model pass alone is
 not a general quality benchmark. Raw results and review artifacts belong in `.work/`.
+
+## Documents
+
+Pass `kind="document"` to `generate` (the default remains `presentation`). The model
+submits content rather than CSS: title, subtitle and ordered blocks with stable IDs.
+Supported block kinds are heading, paragraph, quote, list and table. Each has `id`,
+`kind`, `text`, `items`, `rows`, and `evidence_ids`; unused arrays are empty. Citations
+refer to the extracted evidence, with source references included in generated HTML.
+Use `create-document` to import uncited structure deterministically. `get-revision`
+returns the structure alongside exact HTML; `get-story` returns revision summaries.
+
+Documents have at most 100 blocks and 12 rendered pages. Text blocks are limited to
+1400 characters; lists to eight short items; tables to eight rows, five columns and
+1600 characters total. Split dense material into smaller blocks. These boundaries
+keep the first document renderer predictable; images, equations, inline rich text,
+custom branding and arbitrary Word import are not supported.
+
+```python
+receipt = api.generate(
+    title="Adoption brief", purpose="Explain the evidence and recommended next steps",
+    audience="Engineering leaders", sources=source_objects,
+    grant={"timeout_seconds": 600, "max_output_tokens": 12000},
+    request_id="document-1", kind="document",
+)
+```
+
+The document viewer defaults to continuous flow. The small **View & comments** tab
+reveals controls on hover, click or keyboard focus. It offers paginated view, zoom,
+fit width and navigation across both user and agent comments. Comments use existing
+margin space when it is sufficient and otherwise float over the page. They never
+reserve space or change document geometry. Page/zoom changes preserve the logical
+passage and saved drafts. Moving away from an anchored comment closes its composer;
+return through comment navigation to reopen it. Whole-story comments remain available.
+Native text selection (including a range across blocks) targets exact revision-local
+Unicode offsets. Stable block IDs aid position continuity; comments never silently
+retarget a new revision, even when IDs remain the same.
+
+### Document export
+
+HTML is the exact retained artifact. `export(..., format="pdf")` produces a Letter
+PDF from that HTML using the same static renderer, with text-coverage and bounds
+checks. `format="docx"` produces editable paragraphs, lists and tables from the
+retained structure using python-docx; no LibreOffice or skill checkout is required.
+`get-export` returns base64 bytes, MIME type, revision/source/output hashes, checks
+and limitations for adapters. The dashboard provides the same three download choices.
+Exports do not include review annotations, and output paths are never overwritten.
+
+Browser pagination approximates print layout. Word may wrap or paginate differently
+because its renderer and available fonts differ. Inspect the exported target before
+delivery: HTML model review is not advertised as Word visual review. Per-export
+visual checks are explicitly `not_performed`; the PDF also reports its mechanical
+checks. These are document exports, not general HTML-to-Office conversion.

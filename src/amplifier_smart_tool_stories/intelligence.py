@@ -5,11 +5,21 @@ import json
 import time
 from importlib.resources import files
 
-from .artifacts import selected_evidence, source_excerpts
+from .artifacts import revision_evidence, selected_evidence, source_excerpts
+from .documents import render_document
 from .errors import StoriesError, require
 from .providers import ProviderConfig, complete, prepared
 from .quality import record, render
-from .submissions import COMPOSITION, EVIDENCE, GENERATION, REPAIR, REVIEW
+from .submissions import (
+    COMPOSITION,
+    DOCUMENT_COMPOSITION,
+    DOCUMENT_GENERATION,
+    DOCUMENT_REPAIR,
+    EVIDENCE,
+    GENERATION,
+    REPAIR,
+    REVIEW,
+)
 
 
 def parse_result(text):
@@ -41,7 +51,11 @@ def execute(story, operation, cancelled):
 
             async def ask(instruction, payload, images=None, schema=COMPOSITION):
                 require(not cancelled(), "Operation cancelled.", "cancelled")
-                require(len(calls) < 5, "Model call allowance exhausted.", "execution_limit")
+                require(
+                    len(calls) < (11 if story.get("kind") == "document" else 5),
+                    "Model call allowance exhausted.",
+                    "execution_limit",
+                )
                 remaining = operation["deadline"] - time.time()
                 require(remaining > 0, "Time allowance exhausted.", "execution_timeout")
                 content = json.dumps(payload)
@@ -89,9 +103,14 @@ def execute(story, operation, cancelled):
             )
             evidence = selected_evidence(extracted.get("evidence", []), excerpts, story["sources"])
             base = next((r for r in story["revisions"] if r["id"] == operation["revision_id"]), None)
+            if base:
+                evidence = revision_evidence(base.get("evidence", []), evidence)
             note = next((n for n in story["annotations"] if n["id"] == operation["annotation_id"]), None)
             prompt = files("amplifier_smart_tool_stories").joinpath("resources/storytelling.md").read_text()
             prompt += "\n" + files("amplifier_smart_tool_stories").joinpath("resources/design.md").read_text()
+            is_document = story.get("kind") == "document"
+            if is_document:
+                prompt = files("amplifier_smart_tool_stories").joinpath("resources/documents.md").read_text()
             payload = {
                 "title": story["title"],
                 "purpose": story["purpose"],
@@ -109,7 +128,13 @@ def execute(story, operation, cancelled):
                 ],
             }
             result = await ask(
-                prompt, payload, schema=GENERATION if operation.get("kind") == "generate" else COMPOSITION
+                prompt,
+                payload,
+                schema=(DOCUMENT_GENERATION if operation.get("kind") == "generate" else DOCUMENT_COMPOSITION)
+                if is_document
+                else GENERATION
+                if operation.get("kind") == "generate"
+                else COMPOSITION,
             )
             if result.get("action") == "revise":
                 review_prompt = (
@@ -118,23 +143,61 @@ def execute(story, operation, cancelled):
                 attempts = []
                 for attempt in range(2):
                     try:
+                        if is_document:
+                            result["html"] = render_document(result.get("document"), evidence)
                         rendered = await render(result.get("html"), operation["deadline"] - time.time())
-                        verdict = await ask(
-                            review_prompt,
-                            {
-                                "request": payload,
-                                "sources": story["sources"],
-                                "candidate": result,
-                                "mechanical_findings": rendered["findings"],
-                                "rendered_text": rendered["rendered_text"],
-                            },
-                            rendered["images"],
-                            schema=REVIEW,
+                        images = rendered["images"]
+                        batches = (
+                            [images[i : i + 3] for i in range(0, len(images), 3)] if is_document else [images]
                         )
+                        verdicts = []
+                        reviewers = []
+                        for batch_index, batch in enumerate(batches):
+                            verdicts.append(
+                                await ask(
+                                    review_prompt
+                                    + "\nInspect only the page images supplied in this batch. Other pages are reviewed separately. Evaluate source fidelity using the full text.",
+                                    {
+                                        "request": payload,
+                                        "sources": story["sources"],
+                                        "candidate": {k: v for k, v in result.items() if k != "html"}
+                                        if is_document
+                                        else result,
+                                        "mechanical_findings": rendered["findings"],
+                                        "rendered_text": rendered["rendered_text"],
+                                        "page_batch": batch_index + 1,
+                                        "page_batches": len(batches),
+                                    },
+                                    batch,
+                                    schema=REVIEW,
+                                )
+                            )
+                            reviewers.append(calls[-1])
+                        # Validate each batch independently before aggregating; no failed page can disappear.
+                        reports = [
+                            record(result["html"], {**rendered, "images": batch}, verdict, reviewer)
+                            for batch, verdict, reviewer in zip(batches, verdicts, reviewers)
+                        ]
+                        verdict = {
+                            key: {
+                                "status": "passed"
+                                if all(r[key]["status"] == "passed" for r in reports)
+                                else "failed",
+                                "findings": list(
+                                    dict.fromkeys(f for r in reports for f in r[key]["findings"])
+                                ),
+                            }
+                            for key in ("semantic", "visual")
+                        }
+                        verdict["warnings"] = list(dict.fromkeys(w for r in reports for w in r["warnings"]))
                         reviewed = record(result["html"], rendered, verdict, calls[-1])
+                        reviewed["batches"] = [
+                            {"pages": r["pages"], "reviewer": r["reviewer"]} for r in reports
+                        ]
                     except Exception as exc:
                         exc.candidate = {
                             "html": result.get("html"),
+                            "document": result.get("document"),
                             "reviews": attempts,
                             "review_completed": False,
                         }
@@ -154,9 +217,9 @@ def execute(story, operation, cancelled):
                         raise failure
                     result = await ask(
                         prompt + "\nRepair the supplied candidate using the review findings. "
-                        "Return action=revise with complete corrected HTML. Preserve supported content.",
+                        "Return action=revise with the complete corrected artifact structure. Preserve supported content.",
                         {**payload, "candidate": result, "review": reviewed},
-                        schema=REPAIR,
+                        schema=DOCUMENT_REPAIR if is_document else REPAIR,
                     )
                     require(
                         result.get("action") == "revise",

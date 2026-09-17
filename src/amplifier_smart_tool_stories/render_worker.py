@@ -12,7 +12,7 @@ from contextlib import redirect_stdout
 from .artifacts import parse_html, preview
 
 
-def render(html):
+def render(html, include_pdf=False):
     import pypdfium2 as pdfium
     from weasyprint import CSS, HTML
     from weasyprint.urls import URLFetcher
@@ -20,6 +20,7 @@ def render(html):
     clean, _ = preview(html)
     soup = parse_html(clean)
     slides = soup.select(".slide")
+    document = bool(soup.select_one("article.stories-document"))
     if len(slides) > 12:
         raise ValueError("Rendered review supports at most 12 slides.")
     # Remove source styles from the expected text, not from the rendered document.
@@ -46,9 +47,9 @@ def render(html):
         nav,.navigation,.slide-counter,.nav-dots { display:none!important; }
     """
     )
-    doc = HTML(string=clean, url_fetcher=NoFetch(allowed_protocols=()), media_type="screen").render(
-        stylesheets=[css]
-    )
+    doc = HTML(
+        string=clean, url_fetcher=NoFetch(allowed_protocols=()), media_type="print" if document else "screen"
+    ).render(stylesheets=[] if document else [css])
     if len(doc.pages) > 12:
         raise ValueError("Rendered review exceeds 12 pages; shorten the story.")
     findings, rendered = [], []
@@ -61,12 +62,12 @@ def render(html):
             if (
                 box.position_x < -1
                 or box.position_y < -1
-                or box.position_x + box.width > 1281
-                or box.position_y + box.height > 721
+                or box.position_x + box.width > page.width + 1
+                or box.position_y + box.height > page.height + 1
             ):
                 findings.append(f"Page {i + 1}: text outside the canvas: {text[:80]}")
-            if box.style["font_size"] < 16:
-                findings.append(f"Page {i + 1}: text below 16px: {text[:80]}")
+            if box.style["font_size"] < (12 if document else 16):
+                findings.append(f"Page {i + 1}: text below minimum readable size: {text[:80]}")
     if slides and len(doc.pages) != len(slides):
         findings.append(
             f"{len(slides)} slides rendered as {len(doc.pages)} pages; layout spilled or collapsed."
@@ -80,12 +81,15 @@ def render(html):
     missing = words(expected) - words(" ".join(rendered))
     if missing:
         findings.append("Text missing from rendered layout: " + ", ".join(list(missing)[:15]))
-    pdf = pdfium.PdfDocument(doc.write_pdf())
+    pdf_bytes = doc.write_pdf()
+    pdf = pdfium.PdfDocument(pdf_bytes)
     images = []
     for page in pdf:
         bitmap = page.render(scale=1)
         output = io.BytesIO()
-        bitmap.to_pil().convert("RGB").save(output, format="JPEG", quality=45, optimize=True)
+        bitmap.to_pil().convert("RGB").save(
+            output, format="JPEG", quality=40 if document else 45, optimize=True
+        )
         png = output.getvalue()
         images.append(
             {
@@ -99,6 +103,10 @@ def render(html):
     pdf.close()
     return {
         "images": images,
+        **({"pdf": base64.b64encode(pdf_bytes).decode()} if include_pdf else {}),
+        "renderer": "WeasyPrint Letter document / PDFium"
+        if document
+        else "WeasyPrint static 1280x720 / PDFium",
         "findings": list(dict.fromkeys(findings))[:30],
         "page_count": len(doc.pages),
         "rendered_text": " ".join(rendered),
@@ -114,7 +122,7 @@ if __name__ == "__main__":
         # JSON escaping can expand a valid 2 MB artifact by up to six times.
         value = json.loads(sys.stdin.read(12_100_000))
         with redirect_stdout(io.StringIO()):
-            result = render(value["html"])
+            result = render(value["html"], value.get("include_pdf", False))
         print(json.dumps(result))
     except Exception as exc:
         print(json.dumps({"error": f"Static rendering failed ({type(exc).__name__}): {str(exc)[:300]}"}))

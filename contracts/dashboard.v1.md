@@ -2,7 +2,7 @@
 
 **Who builds against this:** People reviewing stories, calling agents, and authors
 of the built-in dashboard or host presentation adapters.
-An initial HTML slice is implemented; see [current support and limits](../docs/USAGE.md).
+HTML presentations and structured document review are implemented; see [current support and limits](../docs/USAGE.md).
 The full contract remains a target, not a blanket conformance claim.
 
 ## What it looks like
@@ -154,6 +154,17 @@ or requiring a full document, spreadsheet or slide editor.
     separate pencil mode. Opening, typing in or closing the composer must not move,
     resize, rescale or reflow the material. Controls and comments form an optional
     overlay, with plain author labels and no robot icon in agent feedback.
+
+16. **Document reading controls stay secondary.** Continuous flow is the default;
+    paginated reading, zoom and fit width are available through a small discoverable
+    tab that reveals controls on hover, click or keyboard focus. The toolbar stays
+    available during interaction and can be dismissed without closing a comment.
+    Navigating comments includes both person and caller annotations. Use existing
+    whitespace for anchored comments when sufficient; otherwise use a floating
+    overlay. Explicit view/zoom changes preserve the logical reading passage and
+    drafts. Leaving a comment's passage closes its composer without discarding the
+    draft. Browser page boundaries are approximate and must not be represented as
+    proof of Word or PDF pagination.
 
 ## Stories acceptance checks
 

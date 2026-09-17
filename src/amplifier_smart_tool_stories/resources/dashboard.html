@@ -12,6 +12,31 @@
       title="Story material"
       sandbox="allow-scripts"
     ></iframe>
+    <div id="documentTools" hidden>
+      <button id="revealTools" aria-expanded="false" aria-controls="viewTools">
+        View &amp; comments
+      </button>
+      <div id="viewTools" hidden>
+        <label
+          >View
+          <select id="documentMode">
+            <option value="continuous">Continuous</option>
+            <option value="paginated">Paginated</option>
+          </select></label
+        >
+        <button id="zoomOut" aria-label="Zoom out">−</button
+        ><output id="zoomLabel">100%</output
+        ><button id="zoomIn" aria-label="Zoom in">+</button
+        ><button id="fitWidth">Fit width</button>
+        <button id="previousComment" aria-label="Previous comment">‹</button
+        ><span id="commentPosition">No comments</span
+        ><button id="nextComment" aria-label="Next comment">›</button>
+        <button id="documentOverall">Comment</button
+        ><button id="documentDetails">Details</button
+        ><button id="documentOverlay">Hide review</button
+        ><button id="hideTools" aria-label="Hide toolbar">×</button>
+      </div>
+    </div>
     <header id="bar">
       <span class="brand">Stories</span><span id="title"></span
       ><button id="agent" hidden>Agent highlights</button
@@ -56,7 +81,14 @@
       </div>
       <label for="versions">Reviewing version</label
       ><select id="versions"></select
-      ><button id="export">Export this version</button>
+      ><label for="exportFormat">Export format</label
+      ><select id="exportFormat">
+        <option value="html">HTML</option>
+        <option value="pdf">PDF · Letter pages</option>
+        <option value="docx">Word · editable</option>
+      </select>
+      <p id="exportLimit"></p>
+      <button id="export">Export this version</button>
       <h3>Sources & checks</h3>
       <div id="sources"></div>
       <h3>Comments on this version</h3>

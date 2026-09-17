@@ -33,11 +33,16 @@ def preview(html):
         # Prevent a supplied stylesheet from masquerading as overlay controls outside its iframe.
         node.attrs.pop("contenteditable", None)
     anchors = []
-    blocks = soup.body.select("h1,h2,h3,h4,p,li,td,th,blockquote,figcaption,article,section,div,span")
+    blocks = soup.body.select("h1,h2,h3,h4,p,li,td,th,blockquote,figcaption,article,section,div,span,table")
+    structured = soup.select_one("article.stories-document")
+    used = set()
     for i, node in enumerate(blocks):
         if not node.get_text(strip=True):
             continue
-        key = f"e{i}"
+        key = "d-" + node["id"] if structured and node.get("id") else f"e{i}"
+        if key in used:
+            key = f"e{i}"
+        used.add(key)
         node["data-stories-id"] = key
         anchors.append({"element": key, "text": node.get_text(), "tag": node.name})
     return str(soup), anchors
@@ -123,3 +128,25 @@ def selected_evidence(selections, index, sources):
         )
         evidence.append({"id": item.get("id"), "claim": item.get("claim"), **index[item["excerpt_id"]]})
     return evidence_checked(evidence, sources)
+
+
+def revision_evidence(base, extracted):
+    """Retain existing citation identities when a revision selects excerpts in a new order."""
+    import copy
+
+    result = copy.deepcopy(base or [])
+    used = {fact["id"] for fact in result}
+    keys = {(fact["source_id"], fact["quote"]) for fact in result}
+    for fact in extracted:
+        key = (fact["source_id"], fact["quote"])
+        if key in keys:
+            continue
+        fact = copy.deepcopy(fact)
+        number = 1
+        while f"fact{number}" in used:
+            number += 1
+        fact["id"] = f"fact{number}"
+        result.append(fact)
+        used.add(fact["id"])
+        keys.add(key)
+    return result

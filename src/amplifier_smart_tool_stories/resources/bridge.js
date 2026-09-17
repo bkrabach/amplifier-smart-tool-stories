@@ -52,6 +52,7 @@
     }
     return null;
   }
+  window.storiesTextRange = textRange;
   function show(i) {
     if (slides.length) {
       slide = Math.max(0, Math.min(i, slides.length - 1));
@@ -79,8 +80,25 @@
     if (CSS.highlights) CSS.highlights.delete("selectionTarget");
   }
   let dragging = false,
-    down;
+    down,
+    cancelled = false,
+    selectionVersion = 0;
+  function dismissSelection() {
+    selectionVersion++;
+    clear();
+    emit("dismiss-selection");
+  }
+  function scrolling() {
+    cancelled = true;
+    dismissSelection();
+  }
+  document.addEventListener("scroll", scrolling, { capture: true, passive: true });
+  document.addEventListener("wheel", scrolling, { passive: true });
+  document.addEventListener("touchmove", scrolling, { passive: true });
+  document.addEventListener("pointercancel", scrolling);
   document.addEventListener("pointerdown", (e) => {
+    dismissSelection();
+    cancelled = false;
     down = { x: e.clientX, y: e.clientY };
     dragging = false;
   });
@@ -88,10 +106,12 @@
     if (down && Math.hypot(e.clientX - down.x, e.clientY - down.y) > 4)
       dragging = true;
   });
-  document.addEventListener("pointerup", () => {
+  function selectedText() {
     down = null;
-    if (!overlay) return;
+    if (!overlay || cancelled) return;
+    const version = selectionVersion;
     setTimeout(() => {
+      if (version !== selectionVersion) return;
       let s = getSelection();
       if (!s || s.isCollapsed || !s.rangeCount) return;
       const r = s.getRangeAt(0);
@@ -122,9 +142,17 @@
         rect: { x: b.x, y: b.y, width: b.width, height: b.height },
       });
     }, 0);
+  }
+  document.addEventListener("pointerup", selectedText);
+  document.addEventListener("keyup", (e) => {
+    if (e.shiftKey || e.key === "Shift") {
+      cancelled = false;
+      selectedText();
+    }
   });
+
   document.addEventListener("click", (e) => {
-    if (!overlay || dragging || getSelection()?.toString()) return;
+    if (!overlay || cancelled || dragging || getSelection()?.toString()) return;
     const hit = noteRanges.find((n) =>
       [...n.range.getClientRects()].some(
         (r) =>
@@ -156,6 +184,7 @@
   window.addEventListener("message", (e) => {
     if (e.source !== parent || e.data?.channel !== channel) return;
     const m = e.data;
+    if (m.type === "dismiss-selection") dismissSelection();
     if (m.type === "navigate") show(slide + m.delta);
     if (m.type === "position") show(m.slide);
     if (m.type === "overlay") {
@@ -203,7 +232,14 @@
       CSS.highlights.set("stories", new Highlight(...ranges));
   }
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      cancelled = true;
+      dismissSelection();
+      getSelection()?.removeAllRanges();
+      return;
+    }
     if (getSelection()?.toString()) return;
+    if (!slides.length) return;
     if (e.key === "ArrowRight") show(slide + 1);
     if (e.key === "ArrowLeft") show(slide - 1);
   });
