@@ -92,6 +92,10 @@ def evidence_checked(evidence, sources):
             "Evidence quote must occur verbatim in its source.",
         )
         require(isinstance(fact.get("claim"), str) and fact["claim"], "Evidence needs a claim.")
+    for fact in evidence:
+        source = next(s for s in sources if s["id"] == fact["source_id"])
+        fact["source_kind"] = source.get("kind", "source")
+        fact["attribution"] = source.get("attribution", "")
     return evidence
 
 
@@ -109,7 +113,15 @@ def source_excerpts(sources):
                 quote = text[start : start + 2000]
                 excerpts.append({"excerpt_id": key, "text": quote})
                 index[key] = {"source_id": source["id"], "quote": quote}
-        catalog.append({"id": source["id"], "name": source["name"], "excerpts": excerpts})
+        catalog.append(
+            {
+                "id": source["id"],
+                "name": source["name"],
+                "kind": source.get("kind", "source"),
+                "attribution": source.get("attribution", ""),
+                "excerpts": excerpts,
+            }
+        )
     return catalog, index
 
 

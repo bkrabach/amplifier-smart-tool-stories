@@ -84,6 +84,13 @@ def test_document_revision_retains_structure_and_annotation_base(tmp_path):
 
     def adapter(story, operation):
         return {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
             "action": "revise",
             "message": "Clarified the limitation.",
             "document": revised,
@@ -113,6 +120,13 @@ def test_generate_document_kind_rejects_wrong_artifact(tmp_path):
     api = Stories(
         tmp_path,
         intelligence=lambda *_: {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
             "action": "revise",
             "message": "Wrong",
             "html": render_document(document()),

@@ -118,9 +118,8 @@ operations, time per operation and output tokens per call. Each operation uses a
 five presentation model calls, or eleven for documents reviewed in batches of up to
 three pages: evidence/planning, composition, source/page review, and at most one repair
 with fresh review. Answers and clarifications use at most two. It can answer,
-revise or ask for clarification. Clarifications are visible `needs_input` outcomes;
-submit a follow-up comment on the same anchor to provide more context. They are not
-automatically resumed. Grants are not dollar limits. No automatic retries occur.
+revise or ask for clarification. Clarifications are visible `needs_input` outcomes; use `respond` for comment questions
+and `answer-question` for initial generation. They are not automatically resumed. Grants are not dollar limits. No automatic retries occur.
 
 To generate a new story, call `generate` with title, purpose, audience, source objects,
 grant and request_id. Optional kind is presentation (default) or document. The receipt identifies story and operation. Call `run-operation`
@@ -141,6 +140,9 @@ human approval nor independent factual verification. Generated outputs remain dr
 ## Capabilities
 
 All exist as methods on Stories (hyphens become underscores):
+
+- `answer-question`: answer a pending initial-generation question with an explicit grant.
+- `accept-revision`: record person acceptance of an exact revision separately from model review.
 
 - `manifest`: structured capability names, signatures and model-use classifications.
 - `create-story`: import supplied HTML with title, optional sources, purpose and audience.
@@ -250,3 +252,35 @@ metrics/evaluation explanation. These are writing capabilities over supplied tex
 not repository scanners, executable code verification, platform publishing,
 spreadsheet calculation or arbitrary file conversion. All use the existing supported
 presentation/document outputs and quality review, within the existing call allowance.
+
+## Questions, source status and acceptance
+
+`answer-question` takes operation_id, text, grant and request_id to answer a pending
+initial-generation question. It creates a correlated bounded continuation in the
+same story with the original provider/model and retained question/answer history.
+The answered operation becomes `continued` and exposes `answered_by`; its question
+is retained, while the child operation carries execution status.
+Supply a new finite grant explicitly; no extra spending is inferred from the old
+question. A question accepts one answer; identical request retries return the same
+receipt. Default execution is queued. Comment questions still use `respond`.
+
+Source objects accept optional `kind` (source, summary, hypothesis, preference;
+default source) and `attribution` text. A source is supplied material, not certified
+truth. Summary originals are not implicitly inspected. Classification and attribution
+travel with the extracted evidence; preferences and hypotheses are not original
+observations. Existing sources without these fields retain the source default.
+
+Generated results and revisions expose `changes` with summary, material_changes,
+omissions and assumptions, plus `calculations`. Revision review compares the base
+and proposed content and checks disclosures. Calculation entries identify quoted
+inputs, operation, result, decimal_places and unit. Decimal arithmetic is verified;
+semantic relevance, coverage and units still require model/human review. Supported
+operations are sum, difference, product, ratio and percent_change (old then new).
+Rounding is half up at 0–12 decimal places. Unsupported derivations must be omitted
+with a limitation or clarified. Story details exposes these records alongside sources.
+
+`accept-revision` takes story_id, revision_id and request_id. Call only to record a
+person's explicitly conveyed acceptance of that exact version. The dashboard offers
+Accept this revision in Story details. Acceptance records timestamp and artifact hash,
+and appears in shared story state/events. It does not change model checks, select a
+version, accept later revisions, modify exports, authorize work or grant publication.

@@ -287,3 +287,21 @@ result guidance, execution effects and failure handling. Both identify the insta
 package resource directory; no checkout, provider access or state initialization is
 needed. `stories skill` prints the same top-level skill. Global options go before
 the command. Library-only callbacks are not CLI JSON inputs.
+
+## Completing questions and inspecting accountability
+
+Read `stories answer-question --help` for initial-generation continuation, and
+`stories accept-revision --help` for explicit human acceptance. Both have library
+methods with the same names using underscores. A continuation requires a new bounded
+grant, keeps the original provider and story, and records its parent question. Read
+its operation receipt; queued submission alone is not completion.
+
+Sources now accept `kind` and `attribution`; use summary/hypothesis/preference to
+preserve their distinction from original source text. Read the packaged operating
+skill for values and defaults. Inspect `changes` and `calculations` through
+get-operation/get-revision or Story details. Mechanical calculation verification does
+not establish the semantic appropriateness of inputs or completeness of disclosure.
+
+Acceptance belongs to shared story state, is tied to an exact revision/hash, and
+never alters the artifact or its review findings. Calling agents record acceptance
+only when explicitly conveyed by the person. Later revisions remain unaccepted.

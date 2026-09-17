@@ -10,7 +10,7 @@ from .lib import Stories
 # Examples are valid JSON inputs; retained identities must come from earlier receipts.
 VALUES = {
     "title": "Release brief",
-    "html": '<section class="slide"><h1>Release brief</h1></section>',
+    "html": '<html><body><section class="slide"><h1>Release brief</h1></section></body></html>',
     "request_id": "brief-1",
     "purpose": "Explain the supplied release",
     "audience": "Team leads",
@@ -43,6 +43,16 @@ VALUES = {
 }
 
 GUIDANCE = {
+    "answer_question": (
+        "Continue initial generation after a question.",
+        "Queued receipt with story_id, operation_id and question_operation_id.",
+        "Use a needs_input generation operation ID, answer text and a new finite grant. The original provider and story are retained. Each question accepts one answer; identical request_id retries reuse the receipt. Use --model-env for execution; queued work needs run-operation.",
+    ),
+    "accept_revision": (
+        "Record a person's explicitly conveyed acceptance.",
+        "status and acceptance with exact revision ID, artifact hash and timestamp.",
+        "Only call when the person has accepted this revision. Does not change selection, model checks, later revisions or publication authority. No model use.",
+    ),
     "manifest": (
         "Discover the callable surface before composing an integration.",
         "Manifest metadata, body and capability signatures.",
@@ -248,7 +258,15 @@ def skill_help(name=None):
             fields.append(f"- `{key}` — {FIELD_HELP[key]}; {required}.")
         flags = (
             " --model-env"
-            if name in {"generate", "run_operation", "test_provider", "provider_models", "provider_login"}
+            if name
+            in {
+                "generate",
+                "answer_question",
+                "run_operation",
+                "test_provider",
+                "provider_models",
+                "provider_login",
+            }
             else ""
         )
         invocation = f"stories --store /tmp/stories-review{flags} {name.replace('_', '-')} --input {shlex.quote(json.dumps(example(name)))}"

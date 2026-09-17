@@ -2,7 +2,7 @@
 
 **Who builds against this:** Calling agents, Python applications, CLI adapters,
 and people creating and revising stories through them.
-This is a behavioral draft. An initial HTML slice exists; [usage and limits](../docs/USAGE.md)
+This is a behavioral draft. HTML presentations and structured documents are implemented; [usage and limits](../docs/USAGE.md)
 distinguish implemented behavior from the broader target.
 
 ## What it looks like
@@ -161,7 +161,7 @@ These are proposed contract checks, not work items or claims of conformance:
   by existing authority; the caller later retrieves the comment and actual outcome.
   Re-reading annotations does not execute them or imply human approval.
 
-Initial library/HTTP checks and a licensed bundle HTML fixture now exist in `tests/`.
+Library/HTTP, provider, document, accountability and licensed bundle fixture checks exist in `tests/`.
 These do not establish the entire contract or independent story-quality review.
 These checks supplement the invocation and storytelling checks, not replace them.
 
@@ -179,3 +179,19 @@ These checks supplement the invocation and storytelling checks, not replace them
   observable actions and shared settings semantics; concrete APIs remain open.
 - **2026-09-16** — First behavioral draft separating caller ownership and continuity
   from internal intelligence. No interface lock or implementation claim.
+
+## Implemented continuation and acceptance semantics
+
+Initial-generation questions use `answer_question(operation_id, text, grant, request_id)`.
+A new bounded operation retains the same story, original provider and correlated
+question/answer history. Explicit fresh authority covers the continuation; one answer
+is accepted per question, and exact retries never dispatch again. Comment questions
+continue through `respond`. Both preserve the pending question's target/context.
+
+Sources carry kind and attribution through extracted evidence. Revision submissions
+include change summaries, material changes, omissions and assumptions; source/rendered
+review compares them to the base. Arithmetic derivations retain quoted inputs and
+verified decimal results. Model review of coverage and interpretation remains fallible.
+
+`accept_revision` records explicitly conveyed person acceptance of a revision/hash
+without changing selection, review results, artifact bytes or future authority.

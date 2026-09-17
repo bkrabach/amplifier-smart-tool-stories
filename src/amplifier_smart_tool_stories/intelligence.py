@@ -107,6 +107,7 @@ def execute(story, operation, cancelled):
                     "purpose": story["purpose"],
                     "audience": story["audience"],
                     "comment": note,
+                    "continuation": operation.get("continuation", []),
                 },
                 schema=EVIDENCE,
             )
@@ -135,12 +136,17 @@ def execute(story, operation, cancelled):
                 "limitations": extracted.get("limitations", []),
                 "base": base,
                 "comment": note,
+                "continuation": operation.get("continuation", []),
                 "related_comments": [
                     n
                     for n in story["annotations"]
                     if note and n["revision_id"] == note["revision_id"] and n["anchor"] == note["anchor"]
                 ],
             }
+            prompt += (
+                "\n"
+                + files("amplifier_smart_tool_stories").joinpath("resources/accountability.md").read_text()
+            )
             result = await ask(
                 prompt,
                 payload,
@@ -155,6 +161,11 @@ def execute(story, operation, cancelled):
                     files("amplifier_smart_tool_stories").joinpath("resources/review.md").read_text()
                     + "\nFail recommendations that present PowerPoint/spreadsheets or publication as supported outputs of this tool. The source bundle is a different product. Fail an inferred performance advantage from architecture alone, or treating a recommendation to collect data as proof that no instrumentation exists.\n"
                     + expertise_prompt
+                    + "\n"
+                    + files("amplifier_smart_tool_stories")
+                    .joinpath("resources/accountability.md")
+                    .read_text()
+                    + "\nCompare candidate to request.base: fail undisclosed material omissions or changed assumptions, and changes outside the requested scope. Verify every derived numeric claim has a correct calculations entry, and summary/hypothesis/preferences are never presented as inspected original evidence."
                 )
                 attempts = []
                 for attempt in range(2):
@@ -185,6 +196,10 @@ def execute(story, operation, cancelled):
                                     "invalid_model_result",
                                 )
                                 continue
+                        from .accountability import validate_disclosures
+
+                        result["evidence"] = evidence
+                        validate_disclosures(result, story, operation)
                         rendered = await render(result.get("html"), operation["deadline"] - time.time())
                         images = rendered["images"]
                         batches = (
@@ -244,6 +259,9 @@ def execute(story, operation, cancelled):
                         raise
                     attempts.append(reviewed)
                     if reviewed["passed"]:
+                        from .accountability import disclosure_hash
+
+                        reviewed["disclosure_sha256"] = disclosure_hash(result)
                         result["quality_review"] = reviewed
                         result["review_attempts"] = attempts
                         break

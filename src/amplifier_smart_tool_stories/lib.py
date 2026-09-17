@@ -81,16 +81,27 @@ class Stories:
         result, seen = [], set()
         for source in sources:
             require(isinstance(source, dict), "Source must be an object.")
-            require(set(source) <= {"id", "name", "content"}, "Sources accept only id, name, content.")
+            require(set(source) <= {"id", "name", "content", "kind", "attribution"}, "Unknown source fields.")
             sid, content = source.get("id"), source.get("content")
             require(
                 isinstance(sid, str) and sid and sid not in seen,
                 "Source IDs must be unique nonempty strings.",
             )
             require(isinstance(content, str) and content.strip(), "Source content must be nonempty text.")
+            require(
+                source.get("kind", "source") in {"source", "summary", "hypothesis", "preference"},
+                "Unknown source kind.",
+            )
+            require(isinstance(source.get("attribution", ""), str), "Attribution must be text.")
             seen.add(sid)
             result.append(
-                {"id": sid, "name": source.get("name", sid), "content": content, "sha256": digest(content)}
+                {
+                    "id": sid,
+                    "name": source.get("name", sid),
+                    "content": content,
+                    "sha256": digest(content),
+                    **{key: source[key] for key in ("kind", "attribution") if key in source},
+                }
             )
         require(sum(len(s["content"].encode()) for s in result) <= 1_000_000, "Sources exceed 1 MB.")
         return result
@@ -361,6 +372,68 @@ class Stories:
         require(note is not None, "Unknown annotation.")
         return self.add_comment(story_id, note["revision_id"], text, request_id, note["anchor"], "user")
 
+    def answer_question(self, operation_id, text, grant, request_id):
+        """Answer a pending generation question with explicit bounded authority; retain its story and question chain."""
+        require(
+            isinstance(text, str) and 0 < len(text.strip()) <= 12000,
+            "Supply an answer under 12000 characters.",
+        )
+        checked = self._grant(grant)
+
+        def action(db):
+            prior = self.store.get(db, "operations", operation_id)
+            require(not prior.get("answered_by"), "Question already answered.", "question_already_answered")
+            require(
+                prior["state"] == "needs_input" and prior["kind"] == "generate",
+                "Operation is not a pending generation question.",
+                "question_not_pending",
+            )
+            story = self.store.get(db, "stories", prior["story_id"])
+            child_id = self._queue(db, story, "generate", checked)
+            child = self.store.get(db, "operations", child_id)
+            child["continuation"] = prior.get("continuation", []) + [
+                {"operation_id": operation_id, "question": prior["result"]["message"], "answer": text}
+            ]
+            child["provider"] = prior["provider"]
+            self.store.put(db, "operations", child)
+            prior["answered_by"] = child_id
+            prior["state"] = "continued"
+            self.store.put(db, "operations", prior)
+            self.store.event(
+                db,
+                story["id"],
+                "question_answered",
+                operation_id=operation_id,
+                continuation_operation_id=child_id,
+            )
+            return {
+                "status": "queued",
+                "story_id": story["id"],
+                "operation_id": child_id,
+                "question_operation_id": operation_id,
+            }
+
+        return self._mutation(request_id, "answer_question", [operation_id, text, grant], action)
+
+    def accept_revision(self, story_id, revision_id, request_id):
+        """Record explicitly conveyed human acceptance of this exact revision; no model or publication authority."""
+
+        def action(db):
+            story = self.store.get(db, "stories", story_id)
+            revision = self._revision(story, revision_id)
+            acceptance = {
+                "revision_id": revision_id,
+                "artifact_sha256": revision["sha256"],
+                "accepted_at": now(),
+                "request_id": request_id,
+            }
+            story.setdefault("acceptances", []).append(acceptance)
+            self.store.put(db, "stories", story)
+            self.store.event(db, story_id, "revision_accepted", **acceptance)
+            return {"status": "succeeded", "acceptance": acceptance}
+
+        return self._mutation(request_id, "accept_revision", [story_id, revision_id], action)
+
     def save_draft(self, story_id, revision_id, draft_id, sequence, text, anchor=None):
         """Save unsubmitted text; monotonically ordered per draft_id, never executes a model."""
         require(isinstance(draft_id, str) and 0 < len(draft_id) <= 200, "Supply a draft identity.")
@@ -510,6 +583,9 @@ class Stories:
                     require(
                         result["action"] in {"revise", "clarify"}, "Generation needs HTML or a clarification."
                     )
+                from .accountability import validate_disclosures
+
+                validate_disclosures(result, story, op)
                 new_revision = None
                 evidence = evidence_checked(result.get("evidence", []), story["sources"])
                 if result["action"] == "revise":
@@ -518,6 +594,15 @@ class Stories:
                     if story.get("kind") == "document":
                         require(result.get("document") is not None, "Document structure is required.")
                     quality = result.get("quality_review")
+                    if self.intelligence is None:
+                        from .accountability import disclosure_hash
+
+                        require(
+                            isinstance(quality, dict)
+                            and quality.get("disclosure_sha256") == disclosure_hash(result),
+                            "Disclosure changed after review.",
+                            "stale_review",
+                        )
                     if self.intelligence is None or quality is not None:
                         validate_record(result.get("html"), quality)
                     require(
@@ -537,6 +622,8 @@ class Stories:
                         "model",
                         document=result.get("document"),
                     )
+                    rev["changes"] = result.get("changes", {})
+                    rev["calculations"] = result.get("calculations", [])
                     if quality is not None:
                         rev["quality_review"] = quality
                         rev["review"]["semantic"] = "passed: model review of source fidelity and narrative"
@@ -562,6 +649,8 @@ class Stories:
                         "action": result["action"],
                         "message": result["message"],
                         "revision_id": new_revision,
+                        "changes": result.get("changes", {}),
+                        "calculations": result.get("calculations", []),
                         "provenance": result.get("provenance", {}),
                         "evidence": evidence,
                         "review_attempts": result.get("review_attempts", []),
@@ -749,6 +838,8 @@ CAPABILITIES = [
     "grant_feedback",
     "add_comment",
     "respond",
+    "answer_question",
+    "accept_revision",
     "save_draft",
     "read_changes",
     "get_operation",

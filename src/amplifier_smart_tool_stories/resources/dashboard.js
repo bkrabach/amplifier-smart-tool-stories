@@ -205,6 +205,9 @@ function update() {
     $("threads").append(b);
   }
   const current = story.revisions.find((r) => r.id === revision);
+  const accepted = (story.acceptances || []).find(a => a.revision_id === revision);
+  $("acceptRevision").disabled = !current || Boolean(accepted);
+  $("acceptanceStatus").textContent = accepted ? "Accepted by person · this revision only" : "Acceptance is separate from model checks and does not authorize publication.";
   $("sources").textContent =
     (current
       ? Object.entries(current.review)
@@ -221,7 +224,9 @@ function update() {
         ].join("\n")
       : "") +
     "\n\n" +
-    story.sources.map((s) => s.name + "\n" + s.content).join("\n\n");
+    story.sources.map((s) => s.name + " · " + (s.kind || "source") + "\n" + (s.attribution || "") + "\n" + s.content).join("\n\n");
+  if (current?.changes) $("sources").textContent += "\n\nChanges, omissions & assumptions\n" + [current.changes.summary, ...["material_changes", "omissions", "assumptions"].map(key => key.replaceAll("_", " ") + ":\n" + (current.changes[key].map(text => "• " + text).join("\n") || "None reported"))].join("\n\n");
+  if (current?.calculations?.length) $("sources").textContent += "\n\nCalculations\n" + current.calculations.map(c => `${c.operation.replaceAll("_", " ")}: ${c.inputs.map(i => i.value + " [" + i.evidence_id + "]").join(", ")} → ${c.result} ${c.unit}\nRounded to ${c.decimal_places} decimal places. Arithmetic checked; interpretation reviewed by model.`).join("\n\n");
   const versions = $("versions");
   if (versions.options.length !== story.revisions.length) {
     versions.replaceChildren();
@@ -604,3 +609,12 @@ function nextComment(delta) {
 $("previousComment").onclick = () => nextComment(-1);
 $("nextComment").onclick = () => nextComment(1);
 boot().catch(error);
+
+$("acceptRevision").onclick = async () => {
+  const target = revision;
+  try {
+    await api("accept-revision", {revision_id: target, request_id: requestId()});
+    story = await api("get-story", {});
+    update();
+  } catch (e) { error(e); }
+};

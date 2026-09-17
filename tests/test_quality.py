@@ -97,12 +97,34 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
     revised = HTML.replace("qualified", "bounded")
     answers = [
         {"evidence": [], "plan": "Be precise", "expertise": ["case-study"]},
-        {"action": "revise", "html": HTML, "message": "Draft"},
+        {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
+            "action": "revise",
+            "html": HTML,
+            "message": "Draft",
+        },
         {
             "semantic": {"status": "failed", "findings": ["Qualify result"]},
             "visual": {"status": "passed", "findings": []},
         },
-        {"action": "revise", "html": revised, "message": "Revised"},
+        {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
+            "action": "revise",
+            "html": revised,
+            "message": "Revised",
+        },
         {"semantic": {"status": "passed", "findings": []}, "visual": {"status": "passed", "findings": []}},
     ]
     payloads, rendered = [], []
@@ -111,7 +133,14 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
         import json
 
         payloads.append(messages)
-        return json.dumps(answers.pop(0)), {"provider": "test"}
+        answer = answers.pop(0)
+        if "action" in answer:
+            answer.setdefault(
+                "changes",
+                {"summary": "Requested revision", "material_changes": [], "omissions": [], "assumptions": []},
+            )
+            answer.setdefault("calculations", [])
+        return json.dumps(answer), {"provider": "test"}
 
     async def render_stub(html, timeout):
         rendered.append(html)
@@ -160,12 +189,34 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
     answers.extend(
         [
             {"evidence": [], "expertise": ["general"]},
-            {"action": "revise", "html": HTML, "message": "Draft"},
+            {
+                "changes": {
+                    "summary": "Requested change",
+                    "material_changes": [],
+                    "omissions": [],
+                    "assumptions": [],
+                },
+                "calculations": [],
+                "action": "revise",
+                "html": HTML,
+                "message": "Draft",
+            },
             {
                 "semantic": {"status": "failed", "findings": ["Unsupported"]},
                 "visual": {"status": "passed", "findings": []},
             },
-            {"action": "revise", "html": revised, "message": "Repair"},
+            {
+                "changes": {
+                    "summary": "Requested change",
+                    "material_changes": [],
+                    "omissions": [],
+                    "assumptions": [],
+                },
+                "calculations": [],
+                "action": "revise",
+                "html": revised,
+                "message": "Repair",
+            },
             {
                 "semantic": {"status": "failed", "findings": ["Still unsupported"]},
                 "visual": {"status": "passed", "findings": []},
@@ -185,6 +236,13 @@ def test_library_rejects_stale_review_without_committing(tmp_path):
 
     def adapter(story, operation):
         return {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
             "action": "revise",
             "html": HTML.replace("qualified", "changed"),
             "message": "Updated",

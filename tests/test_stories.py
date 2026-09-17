@@ -83,6 +83,13 @@ def test_revision_from_exact_base_and_honest_checks(api):
     api.grant_feedback(sid, {}, "grant")
     note = api.add_comment(sid, rid, "Shorten title", "edit")
     api.intelligence = lambda story, op: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
         "action": "revise",
         "message": "Shortened title",
         "html": HTML.replace("Evidence", "Result"),
@@ -110,7 +117,18 @@ def test_bad_submission_cannot_publish(api):
     sid, rid = r["story_id"], r["revision_id"]
     api.grant_feedback(sid, {}, "grant")
     note = api.add_comment(sid, rid, "Edit", "edit")
-    api.intelligence = lambda *_: {"action": "revise", "message": "Done", "html": "<p>Not a document</p>"}
+    api.intelligence = lambda *_: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
+        "action": "revise",
+        "message": "Done",
+        "html": "<p>Not a document</p>",
+    }
     assert api.run_operation(note["operation_id"])["state"] == "failed"
     assert len(api.get_story(sid)["revisions"]) == 1
 
@@ -125,7 +143,17 @@ def test_cancel_blocks_late_revision(api):
     def model(*_):
         started.set()
         finish.wait(5)
-        return {"action": "answer", "message": "Late answer"}
+        return {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
+            "action": "answer",
+            "message": "Late answer",
+        }
 
     api.intelligence = model
     worker = threading.Thread(target=api.run_operation, args=(note["operation_id"],))
@@ -144,6 +172,13 @@ def test_source_quotes_reject_fabrication(api):
     api.grant_feedback(sid, {}, "grant")
     n = api.add_comment(sid, rid, "Edit", "edit")
     api.intelligence = lambda *_: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
         "action": "revise",
         "message": "Done",
         "html": HTML,
@@ -209,11 +244,28 @@ def test_clarification_and_explicit_followup(api):
     sid, rid = r["story_id"], r["revision_id"]
     api.grant_feedback(sid, {"max_operations": 2}, "grant")
     n = api.add_comment(sid, rid, "Use the other number", "ambiguous")
-    api.intelligence = lambda *_: {"action": "clarify", "message": "Which figure should replace which?"}
+    api.intelligence = lambda *_: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
+        "action": "clarify",
+        "message": "Which figure should replace which?",
+    }
     result = api.run_operation(n["operation_id"])
     assert result["state"] == "needs_input"
     followup = api.respond(sid, n["annotation_id"], "Keep the measured 8 seconds; change no facts.", "answer")
     api.intelligence = lambda story, op: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
         "action": "answer",
         "message": "The measured 8 seconds is already retained.",
     }
@@ -227,7 +279,18 @@ def test_answer_evidence_remains_inspectable(api):
     api.grant_feedback(sid, {}, "grant")
     note = api.add_comment(sid, rid, "Scope?", "question")
     evidence = [{"id": "f1", "source_id": "s1", "quote": "One benchmark only.", "claim": "One benchmark"}]
-    api.intelligence = lambda *_: {"action": "answer", "message": "One benchmark [f1].", "evidence": evidence}
+    api.intelligence = lambda *_: {
+        "changes": {
+            "summary": "Requested change",
+            "material_changes": [],
+            "omissions": [],
+            "assumptions": [],
+        },
+        "calculations": [],
+        "action": "answer",
+        "message": "One benchmark [f1].",
+        "evidence": evidence,
+    }
     result = api.run_operation(note["operation_id"])
     assert result["result"]["evidence"] == evidence
     assert api.get_story(sid)["annotations"][0]["responses"][0]["evidence"] == evidence

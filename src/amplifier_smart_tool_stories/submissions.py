@@ -31,10 +31,29 @@ EVIDENCE = obj(
         },
     }
 )
+CHANGES = obj({"summary": TEXT, "material_changes": TEXTS, "omissions": TEXTS, "assumptions": TEXTS})
+CALCULATIONS = {
+    "type": "array",
+    "items": obj(
+        {
+            "id": TEXT,
+            "operation": {
+                "type": "string",
+                "enum": ["sum", "difference", "product", "ratio", "percent_change"],
+            },
+            "inputs": {"type": "array", "items": obj({"evidence_id": TEXT, "value": TEXT})},
+            "result": TEXT,
+            "decimal_places": {"type": "integer"},
+            "unit": TEXT,
+        }
+    ),
+}
 COMPOSITION = obj(
     {
         "action": {"type": "string", "enum": ["answer", "clarify", "revise"]},
         "message": TEXT,
+        "changes": CHANGES,
+        "calculations": CALCULATIONS,
         "html": TEXT,
         "limitations": TEXTS,
     }
@@ -68,6 +87,8 @@ DOCUMENT_COMPOSITION = obj(
     {
         "action": COMPOSITION["properties"]["action"],
         "message": TEXT,
+        "changes": CHANGES,
+        "calculations": CALCULATIONS,
         "document": DOCUMENT,
         "limitations": TEXTS,
     }

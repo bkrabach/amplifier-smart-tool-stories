@@ -71,15 +71,44 @@ def test_invalid_document_gets_one_structural_repair_then_real_review(monkeypatc
 
     answers = [
         {"evidence": [], "expertise": ["technical"], "plan": "Explain"},
-        {"action": "revise", "message": "Draft", "document": invalid},
-        {"action": "revise", "message": "Repaired", "document": valid},
+        {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
+            "action": "revise",
+            "message": "Draft",
+            "document": invalid,
+        },
+        {
+            "changes": {
+                "summary": "Requested change",
+                "material_changes": [],
+                "omissions": [],
+                "assumptions": [],
+            },
+            "calculations": [],
+            "action": "revise",
+            "message": "Repaired",
+            "document": valid,
+        },
         {"semantic": {"status": "passed", "findings": []}, "visual": {"status": "passed", "findings": []}},
     ]
     prompts = []
 
     async def complete(provider, config, messages, *args, **kwargs):
         prompts.append(messages[0]["content"])
-        return json.dumps(answers.pop(0)), {}
+        answer = answers.pop(0)
+        if "action" in answer:
+            answer.setdefault(
+                "changes",
+                {"summary": "Requested revision", "material_changes": [], "omissions": [], "assumptions": []},
+            )
+            answer.setdefault("calculations", [])
+        return json.dumps(answer), {}
 
     async def render(html, timeout):
         return {
@@ -118,8 +147,30 @@ def test_invalid_document_gets_one_structural_repair_then_real_review(monkeypatc
     answers.extend(
         [
             {"evidence": [], "expertise": ["technical"], "plan": "Explain"},
-            {"action": "revise", "message": "Draft", "document": invalid},
-            {"action": "revise", "message": "Still invalid", "document": invalid},
+            {
+                "changes": {
+                    "summary": "Requested change",
+                    "material_changes": [],
+                    "omissions": [],
+                    "assumptions": [],
+                },
+                "calculations": [],
+                "action": "revise",
+                "message": "Draft",
+                "document": invalid,
+            },
+            {
+                "changes": {
+                    "summary": "Requested change",
+                    "material_changes": [],
+                    "omissions": [],
+                    "assumptions": [],
+                },
+                "calculations": [],
+                "action": "revise",
+                "message": "Still invalid",
+                "document": invalid,
+            },
         ]
     )
     with pytest.raises(StoriesError):

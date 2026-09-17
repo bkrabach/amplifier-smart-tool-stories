@@ -206,8 +206,9 @@ Proposed checks only; these do not establish current support:
   in-place preservation is impossible, leave the reviewed version visible until
   the person chooses to switch. Test changed and removed annotation targets.
 
-The HTML slice has a licensed bundle fixture and library/HTTP checks. Broader-format
-support remains unimplemented. HTTP success alone does not establish usable review.
+Presentation and document review have library/HTTP checks and inspected browser scenarios.
+Spreadsheet review and faithful PowerPoint output remain deferred. HTTP success alone
+does not establish usable review.
 
 ## What v1 deliberately does NOT freeze
 

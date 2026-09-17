@@ -186,3 +186,12 @@ def test_provider_jobs_keep_dashboard_responsive_and_reject_overlap(server, monk
         time.sleep(0.02)
     assert job["status"] == "succeeded"
     assert s.api.config.provider == "openai"  # Testing is not applying.
+
+
+def test_acceptance_route_is_scoped_and_retained(server):
+    s, r, _ = server
+    result = json.load(post(s, "accept-revision", {"revision_id": r["revision_id"], "request_id": "accept"}))
+    assert result["acceptance"]["revision_id"] == r["revision_id"]
+    assert json.load(post(s, "get-story", {}))["acceptances"] == [result["acceptance"]]
+    with pytest.raises(urllib.error.HTTPError):
+        post(s, "accept-revision", {"revision_id": "other", "request_id": "bad-accept"})

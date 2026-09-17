@@ -147,6 +147,7 @@ class Dashboard:
                                 "get_story",
                                 "get_preview",
                                 "select_revision",
+                                "accept_revision",
                                 "add_comment",
                                 "respond",
                                 "save_draft",
