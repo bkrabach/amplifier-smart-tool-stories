@@ -19,3 +19,5 @@ Use conclusion-bearing headings, concrete examples and transitions that advance 
 argument. End with the evidence-backed implication or question to resolve. Provide
 readable source notes with fact IDs and actual supplied source names. Describe only
 research that occurred; never invent commands, dates or verification.
+
+When evidence is missing, say it is absent from the supplied material. Do not claim no evidence, adoption, testing or validation exists anywhere.

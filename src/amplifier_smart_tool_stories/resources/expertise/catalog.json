@@ -1,0 +1,102 @@
+[
+  {
+    "id": "general",
+    "name": "Grounded narrative",
+    "description": "Explain supplied material for a specified audience.",
+    "sources": [
+      "agents/storyteller.md",
+      "context/archetypes/problem-solution-impact.md"
+    ],
+    "resource": "general.md"
+  },
+  {
+    "id": "case-study",
+    "name": "Case study and feature journey",
+    "description": "Tell the story of a project: constraints, decisions, outcomes and transferable lessons.",
+    "sources": [
+      "agents/case-study-writer.md",
+      "context/archetypes/feature-journey.md"
+    ],
+    "resource": "case-study.md"
+  },
+  {
+    "id": "release",
+    "name": "Release notes and migration explanation",
+    "description": "Explain a supplied release, changelog or migration to its users.",
+    "sources": [
+      "agents/release-manager.md",
+      "context/archetypes/release-announcement.md",
+      "recipes/git-tag-to-changelog.yaml"
+    ],
+    "resource": "release.md"
+  },
+  {
+    "id": "technical",
+    "name": "Technical explanation",
+    "description": "Explain architecture, mechanisms, usage and limitations to technical readers.",
+    "sources": [
+      "agents/technical-writer.md",
+      "context/archetypes/technical-deep-dive.md"
+    ],
+    "resource": "technical.md"
+  },
+  {
+    "id": "marketing",
+    "name": "Public-facing feature communication",
+    "description": "Draft an accessible feature article, announcement, newsletter or social copy.",
+    "sources": [
+      "agents/marketing-writer.md",
+      "recipes/blog-post-generator.yaml"
+    ],
+    "resource": "marketing.md"
+  },
+  {
+    "id": "community",
+    "name": "Community spotlight and digest",
+    "description": "Credit a community member\u2019s work or summarize supplied community updates.",
+    "sources": [
+      "agents/community-manager.md",
+      "context/archetypes/community-showcase.md",
+      "recipes/weekly-digest.yaml"
+    ],
+    "resource": "community.md"
+  },
+  {
+    "id": "executive",
+    "name": "Executive brief",
+    "description": "Prepare a concise decision brief with evidence, trade-offs and unknowns.",
+    "sources": [
+      "agents/executive-briefer.md"
+    ],
+    "resource": "executive.md"
+  },
+  {
+    "id": "adaptation",
+    "name": "Audience adaptation",
+    "description": "Retell supplied existing content for a new audience or supported output format.",
+    "sources": [
+      "agents/content-adapter.md"
+    ],
+    "resource": "adaptation.md"
+  },
+  {
+    "id": "strategy",
+    "name": "Story selection and editorial planning",
+    "description": "Compare story angles from supplied material and recommend an audience-focused sequence.",
+    "sources": [
+      "agents/content-strategist.md"
+    ],
+    "resource": "strategy.md"
+  },
+  {
+    "id": "data",
+    "name": "Metrics and evaluation explanation",
+    "description": "Explain supplied measurements, comparisons and evaluation results with their limitations.",
+    "sources": [
+      "agents/data-analyst.md",
+      "agents/evaluation-visualizer.md",
+      "context/archetypes/velocity-metrics.md"
+    ],
+    "resource": "data.md"
+  }
+]

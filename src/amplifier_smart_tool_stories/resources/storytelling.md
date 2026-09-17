@@ -24,4 +24,4 @@ The review viewer supplies slide navigation. Never write placeholder ellipses in
 Return JSON only:
 {"action":"answer|clarify|revise","message":"plain response to the person",
  "html":"complete HTML only when action=revise","limitations":["material omissions or unknowns"]}.
-No tool calls, fences, or extra prose. A new story requires revise or clarify. Keep output compact.
+Use the native structured submission; no fences or extra prose. A new story requires revise or clarify. Keep output compact.

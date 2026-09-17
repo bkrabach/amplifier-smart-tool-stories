@@ -247,3 +247,34 @@ stories --model-env --provider anthropic test-provider
 `provider-login` relays device instructions to stderr and a JSON receipt to stdout.
 Library hosts can supply an `on_progress(text)` callback. Provider login/discovery and
 testing require `model_env`; merely reading or applying settings makes no network call.
+
+## Writing for different purposes
+
+Describe the communication goal in `generate.purpose` and its readers in `audience`.
+Use `kind="document"` for prose; use `kind="presentation"` for slides. For example,
+ask for release notes from supplied change descriptions, a case study from project
+notes, a public feature article, a community digest, an executive brief, or an
+editorial plan. No specialist-name parameter is required. `storytelling-capabilities`
+returns the available approaches and their reference-bundle mapping.
+
+For an audience adaptation, supply the existing story text as a source in a new
+`generate` request, or submit a targeted comment on a retained revision. Comment
+revisions keep their original artifact kind. A format change uses a new generation
+request with explicit source content and desired kind; it is not a fidelity-preserving
+conversion of arbitrary uploaded files. See [coverage and limits](STORYTELLING.md).
+
+Operation results retain selected guidance IDs and hashes under
+`provenance.expertise`, alongside the internal narrative plan. That trace proves
+which guidance was used, not semantic correctness. Source and rendered review are
+still required, and the live scenario suite is explicitly opt-in:
+
+```sh
+uv run python tests/evaluate_storytelling.py --allow-model --case case-study \
+  --provider anthropic --model claude-sonnet-4-6 --store .work/case-study \
+  --request-id case-study-1 --report .work/case-study-report.json
+```
+
+Run a new case with a new request ID. Failed candidates remain inspectable; the
+harness never automatically retries or silently changes provider. Scenario text and
+routing/detail checks supplement model review; neither test counts nor the example
+bundle's own claims establish general quality guarantees.

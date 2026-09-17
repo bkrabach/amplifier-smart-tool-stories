@@ -24,3 +24,7 @@ A failed section must identify actionable findings. Do not output HTML or a repa
 For status=passed, findings MUST be an empty array. Put positive observations,
 nonblocking caveats and pre-existing issues in warnings instead. Findings are only
 blocking issues that require a repair; never return passed with nonempty findings.
+
+When evidence is missing, say it is absent from the supplied material. Do not claim no evidence, adoption, testing or validation exists anywhere.
+
+Review all supplied sources, not just the selected evidence ledger. A material conflicting claim must not disappear merely because planning omitted its excerpt. Require an explicit qualification or unresolved conflict instead of silently choosing one source.

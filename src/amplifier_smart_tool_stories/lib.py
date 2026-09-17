@@ -641,6 +641,17 @@ class Stories:
             raise StoriesError("output_exists", "Output already exists; choose a new destination.") from None
         return {"status": "succeeded", "path": str(path), **result}
 
+    def storytelling_capabilities(self):
+        """List supported writing approaches and their upstream mapping; generation selects relevant expertise from the request."""
+        from .expertise import catalog
+
+        return {
+            "approaches": catalog(),
+            "outputs": ["presentation", "document"],
+            "selection": "Internal evidence planning; describe your purpose and audience.",
+            "limits": "Supplied text only; no network research, publication or arbitrary file conversion.",
+        }
+
     def provider_settings(self):
         """Read redacted provider configuration and setup instructions without booting a model."""
         from .providers import settings
@@ -745,6 +756,7 @@ CAPABILITIES = [
     "cancel_operation",
     "export",
     "get_export",
+    "storytelling_capabilities",
     "provider_settings",
     "configure_provider",
     "prepare_runtime",

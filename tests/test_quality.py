@@ -96,7 +96,7 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
 
     revised = HTML.replace("qualified", "bounded")
     answers = [
-        {"evidence": [], "plan": "Be precise"},
+        {"evidence": [], "plan": "Be precise", "expertise": ["case-study"]},
         {"action": "revise", "html": HTML, "message": "Draft"},
         {
             "semantic": {"status": "failed", "findings": ["Qualify result"]},
@@ -128,12 +128,19 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
         "audience": "Reader",
         "title": "Test",
         "revisions": [],
-        "annotations": [],
+        "annotations": [
+            {
+                "id": "note",
+                "text": "Turn this into a case study.",
+                "revision_id": None,
+                "anchor": {"kind": "story"},
+            }
+        ],
     }
     operation = {
         "provider": {"provider": "openai"},
         "revision_id": None,
-        "annotation_id": None,
+        "annotation_id": "note",
         "deadline": time.time() + 30,
         "grant": {"max_output_tokens": 1000},
     }
@@ -142,12 +149,17 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
     assert result["provenance"]["model_calls"] == 5
     assert len(result["review_attempts"]) == 2
     assert validate_record(revised, result["quality_review"])
+    assert "Turn this into a case study." in payloads[0][1]["content"]
     assert payloads[2][1]["content"][1]["type"] == "image"
+    assert result["provenance"]["expertise"][0]["id"] == "case-study"
+    for index in (1, 2, 3, 4):
+        assert "Case study and feature journey guidance:" in payloads[index][0]["content"]
+        assert "Community spotlight and digest guidance:" not in payloads[index][0]["content"]
 
     # Persistent failure cannot trigger a second repair or produce an accepted artifact.
     answers.extend(
         [
-            {"evidence": []},
+            {"evidence": [], "expertise": ["general"]},
             {"action": "revise", "html": HTML, "message": "Draft"},
             {
                 "semantic": {"status": "failed", "findings": ["Unsupported"]},

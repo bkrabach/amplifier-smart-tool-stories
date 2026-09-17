@@ -1,5 +1,7 @@
 """Native internal submission schemas; not public or side-effecting tools."""
 
+from .expertise import catalog
+
 TEXT = {"type": "string"}
 TEXTS = {"type": "array", "items": TEXT}
 
@@ -21,6 +23,12 @@ EVIDENCE = obj(
         },
         "limitations": TEXTS,
         "plan": TEXT,
+        "expertise": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 2,
+            "items": {"type": "string", "enum": [r["id"] for r in catalog()]},
+        },
     }
 )
 COMPOSITION = obj(

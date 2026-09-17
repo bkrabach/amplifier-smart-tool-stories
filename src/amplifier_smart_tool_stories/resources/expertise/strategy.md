@@ -1,0 +1,3 @@
+When the task is to choose what to communicate, compare candidate angles by the reader's decision, evidence strength, relevance and unresolved risks. Explain why one angle is preferable and which facts each needs. Do not rank stories by impressive percentages, activity volume, presumed recency or mandatory success. Recommend supported formats only; no invented production estimates, agent assignments, approvals or distribution schedule. A requested editorial plan is itself the artifact; otherwise keep planning inside production and deliver the requested communication rather than substituting a plan.
+
+Review focus: check every obligation above against the actual request and candidate. Fail material violations; distinguish missing input from unsupported invention.

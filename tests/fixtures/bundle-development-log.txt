@@ -1,0 +1,6 @@
+8cadef7 | 2026-09-07 | Add CI: ruff (pinned) + the real 74-test suite + bundle-structure, red-then-green proven (#16)
+ac63a4d | 2026-09-07 | Trigger-first agent descriptions with explicit DO NOT USE WHEN (kp79 catalog hygiene) (#14)
+1f2019e | 2026-09-04 | Merge pull request #13 from microsoft/lane/mig-amplifier-bundle-stories
+6e083aa | 2026-09-04 | test: lint that agent-referencing recipes declare schema_version 2
+63d6669 | 2026-09-04 | fix: make session-to-case-study reachable past its strategy step
+5950ff2 | 2026-09-04 | feat: declare schema_version 2 + dependencies on shipped recipes

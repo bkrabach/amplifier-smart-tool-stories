@@ -231,3 +231,22 @@ In Dashboard Settings, testing/discovery/login do not apply the selection. Apply
 changes future work in that session, preserving existing operations and grant limits.
 Setup runs asynchronously; close Settings to keep reading. Sending comments waits
 for setup to finish while drafts remain saved. Stop the viewer to cancel owned setup.
+
+## Storytelling expertise
+
+`storytelling-capabilities` lists the supported writing approaches and upstream
+mapping without model access. `generate` still takes purpose, audience, sources and
+kind; callers need not choose a specialist. Evidence planning selects one or two
+allowlisted approaches, then composition, review and repair load that guidance.
+The operation result's `provenance.expertise` records IDs, guidance hashes and
+upstream resource paths; `provenance.plan` records the audience/narrative plan.
+Comments can change the selected approach (for example, a leadership adaptation)
+without changing the artifact kind or losing the existing revision.
+
+Approaches: grounded narrative, case study/feature journey, release notes/migration
+explanation, technical explanation, public feature communication, community
+spotlight/digest, executive brief, audience adaptation, editorial planning, and
+metrics/evaluation explanation. These are writing capabilities over supplied text,
+not repository scanners, executable code verification, platform publishing,
+spreadsheet calculation or arbitrary file conversion. All use the existing supported
+presentation/document outputs and quality review, within the existing call allowance.
