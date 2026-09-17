@@ -69,7 +69,7 @@ Settings affect future calls and authorized feedback in this instance, never alr
 Every capability accepts `--input '{...}'`, `--input @file.json`, or `--input -`.
 File input loads the exact JSON content; HTML/source contents are explicit strings,
 not implicitly resolved filesystem paths or URLs. `stories CAPABILITY --help` gives
-its exact library signature. Results are JSON on stdout; failure is nonzero with a
+its operating skill: inputs, worked invocation, results, execution and sharp edges. Results are JSON on stdout; failure is nonzero with a
 code and remedy. `stories manifest` is a provider-free smoke check. `-h` and `--help`
 print this complete operating guide.
 
@@ -189,7 +189,7 @@ No automatic publication, notification, caller wake-up, repository access, commi
 Only supplied content is available to intelligence. HTML with external assets or source
 scripts may preview differently; exported originals may contain their original active
 content. Independent semantic/visual grading, production brand systems, images/equations,
-general conversion and settings UI remain outside this slice.
+general conversion remain outside this slice.
 
 
 ## Structured documents

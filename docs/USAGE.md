@@ -278,3 +278,12 @@ Run a new case with a new request ID. Failed candidates remain inspectable; the
 harness never automatically retries or silently changes provider. Scenario text and
 routing/detail checks supplement model review; neither test counts nor the example
 bundle's own claims establish general quality guarantees.
+
+## CLI operating skills
+
+`stories --help` (or `-h`) prints the complete operating skill. Every capability's
+`--help` and `-h` prints a focused skill with input fields, a worked JSON invocation,
+result guidance, execution effects and failure handling. Both identify the installed
+package resource directory; no checkout, provider access or state initialization is
+needed. `stories skill` prints the same top-level skill. Global options go before
+the command. Library-only callbacks are not CLI JSON inputs.

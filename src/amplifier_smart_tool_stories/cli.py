@@ -4,14 +4,20 @@ import argparse
 import inspect
 import json
 import sys
-from importlib.resources import files
 
 from .errors import StoriesError
+from .help import skill_help
 from .lib import CAPABILITIES, Stories
 
 
+class SkillParser(argparse.ArgumentParser):
+    def print_help(self, file=None):
+        command = self.prog.split()[1:]
+        print(skill_help(command[0].replace("-", "_") if command else None), file=file or sys.stdout)
+
+
 def parser():
-    p = argparse.ArgumentParser(prog="stories", description="Evidence-based HTML stories and shared review.")
+    p = SkillParser(prog="stories", description="Evidence-based HTML stories and shared review.")
     p.add_argument("--store", help="Retained state directory")
     p.add_argument("--model-env", action="store_true", help="Authorize reading native provider credentials")
     p.add_argument("--provider", help="openai, chatgpt, copilot, anthropic, gemini")
@@ -32,14 +38,14 @@ def parser():
 
 def main():
     if len(sys.argv) == 1 or sys.argv[1:] in (["--help"], ["-h"]):
-        print(files("amplifier_smart_tool_stories").joinpath("SMART_TOOL.md").read_text())
+        print(skill_help())
         return
     args = parser().parse_args()
     if args.command is None:
         parser().error("Choose a capability; run stories --help.")
     try:
         if args.command == "skill":
-            print(files("amplifier_smart_tool_stories").joinpath("SMART_TOOL.md").read_text())
+            print(skill_help())
             return
         raw = args.input
         if raw.startswith("@"):
