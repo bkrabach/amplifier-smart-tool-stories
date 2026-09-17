@@ -565,47 +565,16 @@ class Stories:
             "history_gap": False,
         }
 
-    def get_export(self, story_id, revision_id, format="html"):
-        """Return an identified export as base64: exact HTML or editable semantic PowerPoint."""
-        import base64
-        import hashlib
-
-        require(format in {"html", "pptx"}, "Supported export formats: html, pptx.", "unsupported_format")
-        story = self.get_story(story_id)
+    def export(self, story_id, revision_id, output_path):
+        """Write exact immutable HTML, excluding review overlays. Refuses to overwrite existing files."""
         rev = self.get_revision(story_id, revision_id)
-        if format == "html":
-            data = rev["html"].encode()
-            mime, details = "text/html", {"limitations": [], "checks": {"exact_source": "passed"}}
-        else:
-            from .powerpoint import MIME, convert
-
-            data, details = convert(rev, story["title"])
-            mime = MIME
-        return {
-            "status": "succeeded",
-            "format": format,
-            "media_type": mime,
-            "revision_id": revision_id,
-            "source_sha256": rev["sha256"],
-            "sha256": hashlib.sha256(data).hexdigest(),
-            "data": base64.b64encode(data).decode(),
-            **details,
-        }
-
-    def export(self, story_id, revision_id, output_path, format="html"):
-        """Export the exact chosen revision as HTML or semantic PPTX; never overwrite a file."""
-        import base64
-
         path = Path(output_path).expanduser().resolve()
-        require(not path.exists(), "Output already exists; choose a new destination.", "output_exists")
-        result = self.get_export(story_id, revision_id, format)
-        data = base64.b64decode(result.pop("data"))
         try:
-            with path.open("xb") as file:
-                file.write(data)
+            with path.open("x", encoding="utf-8", newline="") as file:
+                file.write(rev["html"])
         except FileExistsError:
             raise StoriesError("output_exists", "Output already exists; choose a new destination.") from None
-        return {**result, "path": str(path)}
+        return {"status": "succeeded", "path": str(path), "revision_id": revision_id, "sha256": rev["sha256"]}
 
     def provider_settings(self):
         """Read redacted provider configuration and setup instructions without booting a model."""
@@ -692,7 +661,6 @@ CAPABILITIES = [
     "run_operation",
     "cancel_operation",
     "export",
-    "get_export",
     "provider_settings",
     "configure_provider",
     "prepare_runtime",

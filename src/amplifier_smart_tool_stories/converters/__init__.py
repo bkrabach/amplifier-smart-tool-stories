@@ -1,1 +1,0 @@
-"""Packaged artifact converters."""
