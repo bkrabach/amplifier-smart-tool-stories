@@ -2,7 +2,8 @@
 
 **Who builds against this:** Maintainers implementing Stories' library, embedded
 intelligence, source access, artifact production and review mechanisms.
-This is a behavioral draft; no implementation or executable acceptance evidence exists.
+This is a behavioral draft. An initial HTML slice exists; [usage and limits](../docs/USAGE.md)
+distinguish implemented behavior from the broader target.
 
 ## What it looks like
 
@@ -120,7 +121,8 @@ These are proposed contract checks, not work items or claims of conformance:
 - Provider-free deterministic paths work without runtime initialization; failures
   clean up owned temporary resources and preserve committed and caller-owned data.
 
-No implementation, approved scenario fixtures or executable checks exist yet.
+Initial library/HTTP checks and a licensed bundle HTML fixture now exist in `tests/`.
+These do not establish the entire contract or independent story-quality review.
 Scripted models can test enforcement and failure paths; they cannot establish
 story quality. Source fidelity and rendered usability need independently reviewed
 examples as required by the storytelling contract.

@@ -22,7 +22,22 @@ Stories is designed for people, agents and applications:
 Its model-backed capabilities run inside the tool rather than relying on the
 caller's agent. Deterministic operations need no model credentials.
 
-**Development status:** not yet implemented or available to install.
+**Development status:** initial HTML storytelling and review implementation.
+
+```sh
+uv sync --extra dev
+uv run stories --help
+uv run stories manifest
+```
+
+Import or generate HTML, open a material-first review surface, add caller highlights,
+and submit anchored comments that can answer or revise through embedded Amplifier
+Agent. The library, CLI and dashboard share retained state. Provider choices are
+OpenAI, ChatGPT, Copilot, Anthropic and Gemini; credentials and runtime preparation
+are explicit. Provider settings UI and non-HTML formats are deferred.
+
+See [usage and limits](docs/USAGE.md) and the
+[operating guide](src/amplifier_smart_tool_stories/SMART_TOOL.md).
 
 ## Project documents
 

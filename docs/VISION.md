@@ -40,7 +40,9 @@ answers and changes are observable to the caller; unsubmitted drafts remain dist
 from instructions. Recording an action does not promise to wake the calling agent.
 Existing valid authority can cover requested refinement without repeated approval.
 
-An optional review overlay lets the person select material and leave a comment,
+The material fills the review surface; review controls stay secondary. Opening a
+comment never moves or resizes the material. An optional review overlay lets the
+person select text or an element directly and leave a comment,
 or comment on the story overall. The caller can also highlight material and attach
 questions or explanations for the person. These annotations belong to shared review
 state, not the document, and are absent from artifact exports. Stories' internal

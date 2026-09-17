@@ -2,7 +2,8 @@
 
 **Who builds against this:** Calling agents, Python applications, CLI adapters,
 and people creating and revising stories through them.
-This is a behavioral draft; no implementation or executable acceptance evidence exists.
+This is a behavioral draft. An initial HTML slice exists; [usage and limits](../docs/USAGE.md)
+distinguish implemented behavior from the broader target.
 
 ## What it looks like
 
@@ -160,7 +161,8 @@ These are proposed contract checks, not work items or claims of conformance:
   by existing authority; the caller later retrieves the comment and actual outcome.
   Re-reading annotations does not execute them or imply human approval.
 
-No implementation, approved scenario fixtures or executable checks exist yet.
+Initial library/HTTP checks and a licensed bundle HTML fixture now exist in `tests/`.
+These do not establish the entire contract or independent story-quality review.
 These checks supplement the invocation and storytelling checks, not replace them.
 
 ## What v1 deliberately does NOT freeze

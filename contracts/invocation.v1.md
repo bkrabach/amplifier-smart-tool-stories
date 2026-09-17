@@ -69,8 +69,9 @@ that public boundary.
 
 - Function signatures and command verbs beyond `stories` — promote when caller
   examples and the first capability contract establish their compatibility needs.
-- Provider list, dependency revision and supported platforms — promote when clean
-  installation and runtime evidence establish a support matrix.
+- Supported platforms and independently verified provider authentication paths —
+  the initial adapter supports OpenAI, ChatGPT, Copilot, Anthropic and Gemini.
+  amplifier-agent tracks main; the development lock records the tested revision.
 - MCP, remote services or additional adapters beyond the built-in dashboard —
   promote when an actual consumer requires one. Dashboard behavior is defined in
   its contract; concrete implementation remains open.
@@ -94,5 +95,5 @@ Report skips as skips, never as passes.
 - Clause 8: output, process, dependency and repository snapshots show no unrequested
   changes, publication, service startup or overwrites.
 
-These assertions are not yet executable; there is no implementation.
+Initial executable checks cover the HTML slice; see `tests/` and current usage limits.
 Missing evidence is not a pass.

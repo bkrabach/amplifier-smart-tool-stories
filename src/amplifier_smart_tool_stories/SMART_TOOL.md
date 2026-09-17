@@ -1,0 +1,172 @@
+---
+smart_tool_format: 1
+name: amplifier-smart-tool-stories
+version: 0.1.0
+description: >-
+  Create evidence-based HTML stories and review them with agent highlights and
+  anchored comments. Use for source-backed communication and shared review.
+use_cases:
+  - Turn supplied evidence into an HTML presentation
+  - Review a story with a person and highlight material that needs attention
+  - Answer or act on anchored feedback while preserving the reader's place
+platforms:
+  - macos
+requires:
+  - name: model-provider-access
+    purpose: Needed for generation and intelligent comment responses; retained review works without it.
+    optional: true
+    install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
+---
+# Stories
+
+Create evidence-based HTML stories and review them with a person. The Python
+library is the product; the `stories` CLI and optional local dashboard share its
+state. This first slice supports HTML import, source-to-HTML generation, and
+anchored review. It does not yet produce PowerPoint, Word, PDF or spreadsheets.
+
+## Install and prerequisites
+
+`uv tool install 'amplifier-smart-tool-stories @ git+https://github.com/robotdad/amplifier-smart-tool-stories'`
+
+Python 3.12+. Deterministic operations require no provider. Smart operations use
+embedded amplifier-agent from main. The development lockfile records a tested
+revision; new Git installs resolve the current main. No Amplifier CLI session or
+Anthropic skills checkout is needed.
+
+Before model use, explicitly prepare each selected provider's runtime:
+`stories --provider openai prepare-runtime`. Preparation may fetch/install Amplifier
+modules and writes to its native cache. Missing preparation produces an actionable
+failure; deterministic paths never initialize an agent. If native caches are manually
+removed or invalidated, prepare again. Model execution uses the selected provider's
+native environment/OAuth credentials and sends the supplied story/source context to it.
+No fallback provider or network research occurs.
+
+Providers: openai (OPENAI_API_KEY), anthropic (ANTHROPIC_API_KEY), gemini
+(GOOGLE_API_KEY or GEMINI_API_KEY), chatgpt (Amplifier's existing OAuth device-login
+cache), copilot (COPILOT_AGENT_TOKEN, COPILOT_GITHUB_TOKEN, GH_TOKEN or GITHUB_TOKEN).
+Aliases openai-chatgpt and github-copilot are accepted. Stories does not perform
+interactive login during a call. For Copilot, use `gh auth login` and export a token
+from `gh auth token`; subscription/model access is required. For ChatGPT, complete
+Amplifier's native login first. `provider-settings` gives redacted readiness; it
+is not proof that the account can use a model. `test-provider` explicitly checks it.
+
+## Calling it
+
+Global options precede the capability: `--store PATH`, `--model-env`, `--provider NAME`,
+`--model ID`, `--execution queued|background|in_process`. Default execution is queued.
+Default provider is openai; STORIES_PROVIDER/STORIES_MODEL provide environment defaults.
+Settings affect future calls in this instance, never already-queued work. Settings UI
+and integrated login UI are deferred. Keys never belong in request JSON or retained state.
+
+Every capability accepts `--input '{...}'`, `--input @file.json`, or `--input -`.
+File input loads the exact JSON content; HTML/source contents are explicit strings,
+not implicitly resolved filesystem paths or URLs. `stories CAPABILITY --help` gives
+its exact library signature. Results are JSON on stdout; failure is nonzero with a
+code and remedy. `stories manifest` is a provider-free smoke check. `-h` and `--help`
+print this complete operating guide.
+
+```python
+from amplifier_smart_tool_stories import Stories
+
+api = Stories("/chosen/state")
+receipt = api.create_story(
+    title="Overview",
+    html=html_string,
+    sources=[{"id": "s1", "name": "Source", "content": "Source text"}],
+    request_id="import-1",
+)
+story_id, revision_id = receipt["story_id"], receipt["revision_id"]
+# Inspect revision-local element IDs and exact text before choosing an anchor.
+preview = api.get_preview(story_id, revision_id)
+api.add_comment(
+    story_id, revision_id, "Please check this claim.", "highlight-1", anchor={"kind": "story"}, author="agent"
+)
+viewer = api.start_dashboard(story_id, revision_id)
+```
+
+Open the returned private loopback URL only when authorized. No browser is opened
+implicitly. It is a bearer capability for this story; do not share it. The opaque
+iframe suppresses source scripts, forms and external resources. It displays static
+HTML/CSS with review-owned navigation for `.slide` sections. It is an approximate
+static preview when the original relies on scripts; exact original HTML is retained
+for export. Browser annotations and drafts never modify exported bytes.
+
+Use `get-preview` to discover anchors. Text anchors contain kind=text, element,
+start/end (Unicode character offsets within that element), and exact quote. Element
+anchors contain kind=element and element. Whole-story anchors contain kind=story.
+Anchors never silently migrate to another revision. Person text selection and element
+clicking use the same public validation. Comments open in a floating overlay and
+must not alter material geometry. Agent highlights never initiate model work.
+
+For direct comment handling, authorize a bounded number of future operations:
+```python
+api = Stories("/chosen/state", model_env=True, provider="anthropic", execution="background")
+api.grant_feedback(story_id, {"max_operations": 5, "timeout_seconds": 180}, "grant-1")
+viewer = api.start_dashboard(story_id, revision_id)
+```
+Each user comment consumes one operation allowance when queued. Typing/saving drafts
+never spends. A grant expires after one hour by default, at most 24 hours, and limits
+operations, time per operation and output tokens per call. Each operation uses at most
+two model calls: checked evidence extraction, then response/composition. It can answer,
+revise or ask for clarification. Clarifications are visible `needs_input` outcomes;
+submit a follow-up comment on the same anchor to provide more context. They are not
+automatically resumed. Grants are not dollar limits. No automatic retries occur.
+
+To generate a new story, call `generate` with title, purpose, audience, source objects,
+grant and request_id. The receipt identifies story and operation. Call `run-operation`
+explicitly for queued execution, or choose background/in_process at submission.
+Background workers survive caller exit; read operations never start workers.
+Provider preparation requires explicit setup. Model access requires `--model-env`.
+Sources remain identifiable by hash and evidence quotes are verified against supplied
+text. Semantic support and visual quality are reported as not performed; source-reference
+validation is not proof a claim is true. Generated outputs are drafts for review.
+
+## Capabilities
+
+All exist as methods on Stories (hyphens become underscores):
+
+- `manifest`: structured capability names, signatures and model-use classifications.
+- `create-story`: import supplied HTML with title, optional sources, purpose and audience.
+- `generate`: queue a new HTML story from supplied sources with a finite grant.
+- `list-stories`, `get-story`: retained identities, sources, revisions, drafts and annotations.
+- `get-revision`: exact immutable artifact, evidence, hash, limitations and check statuses.
+- `get-preview`: isolated static HTML and revision-local element/text anchor catalog.
+- `select-revision`: explicitly change the shared selected version; no approval implied.
+- `grant-feedback`: bounded future user-comment authority; no spending on grant creation.
+- `add-comment`: submit a user comment or caller-authored highlight, with revision and anchor.
+- `respond`: user follow-up on an existing annotation's exact target; prior related comments supplied.
+- `save-draft`: monotonically ordered draft save, no model use.
+- `read-changes`: ordered events and next cursor; no model use or notification guarantee.
+- `get-operation`: status/result/error; no worker restart. An elapsed running operation is
+  reported interrupted/uncertain; cancel it before explicitly creating replacement work.
+- `run-operation`: claim and execute one queued operation exactly once.
+- `cancel-operation`: prevent late commits and cooperatively stop active model work.
+- `export`: write exact named revision to a new output_path; never overwrite existing files.
+- `provider-settings`: redacted effective settings and credential readiness.
+- `configure-provider`: process-local future settings; no credential storage or spending.
+- `prepare-runtime`: explicit dependency preparation, network/package/cache writes.
+- `test-provider`: one small live model request, with explicit model-env.
+- `start-dashboard`: owned loopback service for a named story, no automatic browser opening.
+- `stop-dashboard`: release owned service, cancel its comment operations, retain all data.
+- `skill`: CLI convenience printing these instructions; package resource accessible in Python.
+
+## Continuity and limitations
+
+Mutating submissions use caller request_id; identical retries return the original
+receipt, changed payloads conflict. Request IDs are global to the selected store.
+A retry receipt does not rerun failed or interrupted work. Saved operations snapshot
+provider/model and grants. Cancelling prevents late commits but a provider request
+already in flight may have consumed tokens. Uncertain spending is never retried silently.
+A revision branches from the specified base; viewing does not implicitly advance to a
+new result. The dashboard shows a quiet new-version button, preserving view, comment and
+draft until explicit switching. Draft IDs should be unique per editor/session; sequence
+numbers prevent older saves overwriting newer ones. Browser local draft recovery is a
+convenience, while acknowledged saves are available through the library.
+
+State and events are retained without automatic expiration in the chosen local store
+(default ~/.local/share/stories). Single-host SQLite; not a multi-user hosted service.
+No automatic publication, notification, caller wake-up, repository access, commits or pushes.
+Only supplied content is available to intelligence. HTML with external assets or source
+scripts may preview differently; exported originals may contain their original active
+content. Non-HTML authoring/conversion, independent semantic/visual grading, production
+brand systems and settings UI remain outside this initial slice.

@@ -2,7 +2,8 @@
 
 **Who builds against this:** People reviewing stories, calling agents, and authors
 of the built-in dashboard or host presentation adapters.
-No implementation or executable acceptance evidence exists yet.
+An initial HTML slice is implemented; see [current support and limits](../docs/USAGE.md).
+The full contract remains a target, not a blanket conformance claim.
 
 ## What it looks like
 
@@ -147,6 +148,13 @@ or requiring a full document, spreadsheet or slide editor.
     show that fact and offer navigation rather than guessing a new position. Export
     continues to identify the chosen revision even when a newer one is available.
 
+15. **Material comes first and stays fixed during commenting.** The artifact occupies
+    the review surface. Caller highlights reveal relevant material in context. Native
+    text selection or an element selection offers a clear comment action without a
+    separate pencil mode. Opening, typing in or closing the composer must not move,
+    resize, rescale or reflow the material. Controls and comments form an optional
+    overlay, with plain author labels and no robot icon in agent feedback.
+
 ## Stories acceptance checks
 
 Proposed checks only; these do not establish current support:
@@ -182,8 +190,8 @@ Proposed checks only; these do not establish current support:
   in-place preservation is impossible, leave the reviewed version visible until
   the person chooses to switch. Test changed and removed annotation targets.
 
-No format-specific preview fixtures, implementation or independent review evidence
-exists yet. HTTP success alone does not establish a usable review workspace.
+The HTML slice has a licensed bundle fixture and library/HTTP checks. Broader-format
+support remains unimplemented. HTTP success alone does not establish usable review.
 
 ## What v1 deliberately does NOT freeze
 
