@@ -14,6 +14,10 @@ for caller-facing requirements and internal execution obligations.
 
 ## Changes
 
+- Keep tracked files focused on deliverables and durable contributor guidance.
+  Put deliberations, research notes, scratch scripts, intermediate work products and
+  local review materials in the gitignored `.work/` directory. Create it as needed;
+  do not force-add its contents or depend on them for installation, tests or usage.
 - Preserve source references and uncertainty through research, generation and conversion.
 - Test library behavior as well as the CLI, including missing credentials, invalid
   inputs and incomplete artifacts.
