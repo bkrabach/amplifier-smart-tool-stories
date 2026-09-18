@@ -44,9 +44,12 @@ formats; public help and manifests describe only supported, validated behavior.
    capabilities use AI; complete CLI help covers every supported capability.
 4. **Deterministic use does not boot the agent runtime or execute a model.** Import,
    help, manifest access and advertised deterministic checks need no model credentials.
-5. **Smart operations embed `amplifier-agent`.** Callers need neither the Amplifier
-   CLI nor an existing host session, agent catalog or Stories bundle installation.
-   Provider requirements remain explicit; runtime dependencies are not concealed.
+5. **Story composition and reasoning embed `amplifier-agent`.** Callers need neither
+   the Amplifier CLI nor an existing host session, agent catalog or Stories bundle
+   installation. Speech synthesis may call a provider API directly without booting
+   the agent runtime, under the same library-controlled disclosure, spending and
+   execution boundaries. Provider requirements remain explicit; runtime dependencies
+   are not concealed.
    Smart-call documentation identifies the selected provider and that source content
    can be sent to it; invoking that call authorizes only the documented provider use.
    Content is not sent to other destinations through telemetry or unrequested research.
