@@ -95,8 +95,11 @@ alternative directions and structured visual sequences.
    Late results cannot commit into a cancelled or superseded operation. Recovery
    distinguishes already committed work from uncertain external calls and requires
    valid authority before new spending; a checkpoint is not permission to restart.
-   Alternative generation, image generation, review and repairs share the authorized
-   operation allowance. Independent candidates cannot multiply that allowance.
+   Alternative generation, image generation, speech synthesis, review and repairs
+   share the authorized operation allowance. Independent candidates or per-slide
+   synthesis calls cannot multiply that allowance. Completed slide audio remains
+   reusable after partial failure. An uncertain synthesis response is reported as
+   uncertain; retries cannot silently repeat potentially billable synthesis.
 9. **Resources and publication remain controlled.** Imports and deterministic paths
    do not boot intelligence. Credentials remain outside source records and artifacts.
    Temporary work, retained state and requested outputs use their designated locations;

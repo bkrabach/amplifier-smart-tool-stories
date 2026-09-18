@@ -27,7 +27,7 @@ print(viewer['url'])  # Private bearer URL; open it only for the intended review
 ```
 
 Import retains original HTML. Media exports resolve retained asset references;
-HTML without retained media exports unchanged. The viewer disables source scripts,
+Imported scripted HTML without retained media exports unchanged. Script-free decks receive standalone slide navigation. The viewer disables source scripts,
 forms and unregistered resources while allowing attached images and video. It
 supplies navigation for `.slide` sections. HTML that depends on JavaScript or remote
 assets may preview differently. Static model review sees video posters, not playback.
@@ -372,3 +372,32 @@ Storyboard execution may correct one malformed candidate submission within the s
 shared call and time limits. Schema-declared JSON containers returned as encoded text
 are decoded before validation; invalid content is never committed merely because it
 can be parsed.
+## Silent presentation video
+
+Use `stories export-video` (or `Stories.export_video`) for a static presentation
+with retained images. This deterministic operation requires Pango and `ffmpeg`
+with `libx264` plus `ffprobe` on PATH (`brew install ffmpeg` on macOS). It never
+loads a model, synthesizes speech or adds an audio track.
+
+```sh
+stories --store /path/to/store export-video --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","output_path":"/path/to/deck.mp4","slide_seconds":[10,20,20,20,20,10],"timeout_seconds":300}'
+```
+
+Supply exactly one duration per slide, in whole 30-fps frames (for example 10 or
+10.1 seconds). The output is 1280×720 H.264/yuv420p MP4 with cuts between slides.
+Pacing is explicit, not estimated from notes. Speaker notes are retained in the
+export timeline but never spoken. The result and `video_exported` event identify
+the source revision, original assets, frame hashes, timeline and output hash.
+
+Scripts, CSS animations, animated images and embedded audio/video are rejected;
+this version cannot flatten a clip and call it playback. Use HTML/ZIP for those
+presentations. Static rendering can differ from browser layout. Successful full
+video decoding, expected frame count/duration and absence of audio are checked
+separately from visual/semantic review and human acceptance.
+
+Encoding and verification share the requested timeout (1–900 seconds, default
+300); timed-out or interrupted subprocesses are terminated and temporary files
+removed. The completed MP4 is published only after verification, and an existing
+output is never replaced. CLI interrupts use Ctrl-C; this synchronous deterministic
+export does not create a cancellable model operation. Video export is available
+through the library/CLI; the dashboard's export choices remain HTML and ZIP.

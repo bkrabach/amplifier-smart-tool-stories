@@ -90,8 +90,11 @@ Comparison of storyboard directions follows the
    supported. Tests that spend tokens are labeled; generation never unexpectedly
    launches authentication. Credentials and session access secrets do not enter
    generated artifacts, story records or ordinary browser settings storage.
-   Applying a provider also applies to subsequently submitted authorized feedback,
-   without extending its grant or rerouting existing operations. Native sign-in,
+   Applying a writing provider also applies to subsequently submitted authorized
+   feedback, without extending its grant or rerouting existing operations.
+   Narration provider, speech model, voice, delivery instructions and speech
+   availability use the same shared configuration capabilities. Writing-provider
+   changes do not silently alter narration settings or regenerate audio. Native sign-in,
    runtime preparation, discovery and testing are explicit background actions; the
    person can keep reading and saving drafts while they run.
 8. **Export delivers the chosen revision.** Download/export identifies the selected
@@ -100,6 +103,10 @@ Comparison of storyboard directions follows the
    a distinct documented operation with its own prerequisites and checks; its result
    does not silently replace the displayed original. Export never applies unsubmitted
    feedback, overwrites an earlier result without permission, or publishes content.
+   Narrated export distinguishes generating new speech from reusing retained audio
+   or downloading an existing video. The selected notes, narration settings and
+   timing choices remain identifiable; opening export controls does not synthesize
+   speech or initiate spending.
 9. **Activity and lifecycle are honest.** The workspace and caller can distinguish
    preparation, available material, refinement, waiting for input/access and terminal
    outcomes, without exposing private model reasoning. They can cancel work and

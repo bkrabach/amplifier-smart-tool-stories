@@ -16,8 +16,8 @@ requires:
     purpose: Needed for generation and intelligent comment responses; retained review works without it.
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
-  - name: ffprobe
-    purpose: Required only when importing MP4 or WebM video; provided by ffmpeg.
+  - name: ffmpeg
+    purpose: ffmpeg with libx264 and ffprobe for silent video export; ffprobe also inspects imported clips.
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
   - name: pango
@@ -327,14 +327,14 @@ and open index.html with assets/ alongside it. Static media packages reject sour
 scripts, frames, external stylesheets and CSS resource URLs rather than claiming to
 bundle them. Images and video loaded in the local workspace have been browser-tested;
 file:// playback from an extracted package is not yet verified. Codec compatibility
-is browser-dependent. Original HTML without retained media still exports unchanged,
+is browser-dependent. Imported scripted HTML without retained media exports unchanged,
 with unretained media references disclosed; ZIP refuses missing media.
 
 Operational budgets: 32 MiB markup parsing, 256 MiB per media asset, 40 million
 pixels per image, 100 attached assets, 64 MiB encoded images per static rendering.
 These are separate budgets; the old 2 MB total-HTML restriction is removed. Video
 bytes stay outside model context and static rendering. Animated image review sees
-only a static frame. Presentation-to-video export is not implemented yet.
+only a static frame. Silent static-slide video export is available through export-video.
 
 Presentation HTML and ZIP exports include standalone slide navigation when the
 revision has no scripts: previous/next buttons, arrow and Page Up/Down keys,
@@ -407,3 +407,19 @@ Storyboard execution may correct one malformed candidate submission within the s
 shared call and time limits. Schema-declared JSON containers returned as encoded text
 are decoded before validation; invalid content is never committed merely because it
 can be parsed.
+## Silent video delivery
+
+`export-video` / `Stories.export_video` writes a static presentation to 1280×720,
+30-fps H.264 MP4. Supply the exact story/revision, a new `.mp4` output path and
+`slide_seconds` (one positive duration per slide aligned to 30 fps). Requires
+Pango, ffmpeg with libx264, and ffprobe on PATH; `brew install ffmpeg` on macOS.
+No model, narration, TTS or audio track. Notes are retained as provenance; timing
+is explicit rather than estimated. Scripts, CSS animation, animated images and
+embedded clips are rejected. Use HTML/ZIP for interactive or playable media.
+
+The result identifies output/source hashes, assets, timing and separate decode,
+duration and no-audio checks. Successful exports retain this record in a
+`video_exported` change event. Visual review and acceptance do not transfer from
+the deck. `timeout_seconds` bounds work (default 300, 1–900); interruption stops
+subprocesses and cleans temporary files. Existing outputs are never overwritten.
+This is a synchronous library/CLI export, not a model operation or dashboard action.

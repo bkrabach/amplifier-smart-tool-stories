@@ -28,6 +28,7 @@ VALUES = {
             }
         ],
     },
+    "slide_seconds": [10],
     "asset_id": "ASSET_ID",
     "asset_ids": ["ASSET_ID"],
     "name": "Demo poster",
@@ -97,6 +98,11 @@ GUIDANCE = {
         "Inspect one or two retained versions side by side without choosing or generating.",
         "items with exact revision/direction identities, rationale, superseded state and isolated preview payloads.",
         "Works for storyboard, document and presentation revisions in the same story. Omit revision_ids for the latest two direction heads, or latest two ordinary revisions. No assumption of matching page counts; revisions of one direction are not mislabeled as different generated approaches. Alternative generation for documents/presentations remains unavailable.",
+    ),
+    "export_video": (
+        "Deliver a static presentation as a silent video.",
+        "MP4 path, output/revision hashes, retained timeline, asset identities and separate decode/timing checks.",
+        "Supply an .mp4 output_path and slide_seconds with one positive duration per slide, aligned to 30 fps. Requires ffmpeg (libx264), ffprobe and Pango. Encodes 1280x720 H.264 with cuts and no audio. Static HTML and retained static images only; scripts, external dependencies, animations and embedded clips are unsupported. No TTS or model access. Notes are retained in the timing record, not spoken or used to infer durations. timeout_seconds bounds rendering, encoding and verification (default 300, maximum 900). Interrupting terminates active encoder work and removes temporary files; no partial MP4 is published. Never overwrites. Successful plans are retained in read-changes events. Inspect video before delivery; decode checks are not visual approval.",
     ),
     "import_media": (
         "Retain a supplied image, video or caption track without changing it.",
@@ -279,6 +285,7 @@ FIELD_HELP = {
     "fidelity": "outline, mixed or illustrated; illustrated requires retained images for every panel",
     "new_direction": "Explicitly branch an imported structured edit as a separate direction",
     "revision_ids": "One or two exact revision IDs in this story; omitted uses latest direction heads or versions",
+    "slide_seconds": "One positive duration per slide, in seconds aligned to 30 fps",
     "asset_id": "Retained asset identity returned by import-media or resize-media",
     "asset_ids": "Complete list of retained assets available to this presentation; reference them as asset:ASSET_ID",
     "name": "Human-readable media name",
@@ -312,7 +319,7 @@ FIELD_HELP = {
     "output_path": "New destination file in an existing directory",
     "provider": "Provider alias; null uses current selection where accepted",
     "model": "Provider model ID; null uses its default",
-    "timeout_seconds": "Maximum time allowed for the provider operation",
+    "timeout_seconds": "Maximum time allowed for the operation",
 }
 
 
@@ -323,6 +330,8 @@ def example(name):
         for key, parameter in parameters.items()
         if key != "self" and parameter.default is inspect.Parameter.empty
     }
+    if name == "export_video":
+        data["output_path"] = "/tmp/stories-brief.mp4"
     if name == "import_media":
         data["path"] = "/tmp/poster.png"
     if name == "add_comment":

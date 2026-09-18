@@ -110,7 +110,7 @@ for making or reviewing decks and not a general-purpose video editor.
 1. **Notes and timing belong to the selected revision.** Speaker notes remain
    distinct from review comments. Narrated export uses the identified notes or an
    explicitly selected adaptation; it does not silently rewrite them for duration.
-   The retained timing plan maps slides to narration and clip segments. Actual speech
+   The retained timing plan maps slides to narration and clip segments. Measured speech
    duration, pauses, transitions and intended clip playback determine timing.
    Conflicting fixed durations require a choice rather than truncated speech,
    silently accelerated narration or omitted clip content. Silent export uses
@@ -119,13 +119,20 @@ for making or reviewing decks and not a general-purpose video editor.
    plan states how original clip audio and narration interact and avoids accidental
    overlap. Playback segments and transitions remain synchronized throughout the
    exported video; a static screenshot pass cannot establish this.
-3. **Speech is an explicit capability with its own configuration.** Provider and
-   voice selection, prerequisites, disclosure destinations and any spending are
-   documented before synthesis. Stories does not assume the calling agent's model
-   access includes speech, or silently use another service. Missing speech support
-   returns a remedy rather than substituting silent output for requested narration.
-   Reusing retained audio or deterministic video encoding does not require fresh
-   synthesis. Retry and cancellation follow the existing execution contracts.
+3. **Speech is an explicit capability with its own configuration.** Narration
+   provider, speech model, voice and delivery instructions are distinct from the
+   writing provider's settings. Compatible configured credentials may be reused;
+   credential presence or chat sign-in alone does not establish speech access.
+   Prerequisites, disclosure destinations and any spending are documented before
+   synthesis. Stories does not assume the calling agent's model access includes
+   speech, or silently use another service. Missing speech support returns a remedy
+   rather than substituting silent output for requested narration.
+   Synthesized audio is retained with its content identity, measured duration,
+   exact input notes, source slide/revision and effective synthesis settings.
+   Unchanged narration can reuse retained audio; changing notes or synthesis
+   settings requires new audio before it can be presented as matching those inputs.
+   Re-encoding retained audio does not require fresh synthesis. Retry and
+   cancellation follow the existing execution contracts.
 4. **Video is a derived artifact with its own checks.** Export identifies its base
    revision, notes, assets, audio and timing choices. Completion checks the actual
    encoded output and reports playback, timing and audio checks separately from
@@ -154,6 +161,10 @@ for making or reviewing decks and not a general-purpose video editor.
 - For video export, use short and long notes, pauses and an included clip with
   audio. Verify the encoded timeline, complete narration and selected audio behavior.
   A conflicting duration or unavailable speech provider cannot silently alter intent.
+- Reuse unchanged slide audio without a synthesis call; change notes or voice and
+  verify that stale audio is not reused as matching. Change the writing provider
+  without changing narration settings. Exercise partial synthesis failure and an
+  uncertain response without silently repeating completed or potentially billed work.
 
 ## What v1 deliberately does NOT freeze
 

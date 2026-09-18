@@ -126,6 +126,10 @@ Guided ideation and alternative visual sequences extend it under the
     alter running work or previous artifacts. Settings changes neither grant new
     source/disclosure authority nor initiate model spending. Login and connection
     tests are explicit operations, with model use and limitations documented.
+    Narration provider, speech model, voice and delivery instructions are separately
+    inspectable from writing settings. Speech availability is reported separately
+    from credential presence; changing the writing provider does not silently change
+    narration settings or regenerate retained audio.
 13. **Review annotations flow both ways.** The caller can create highlights and
     comments for the person, and retrieve comments and replies entered through the
     dashboard. Annotations identify their author, story, reviewed revision and
