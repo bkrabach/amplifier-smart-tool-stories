@@ -108,7 +108,17 @@ This is an optional export of a selected presentation revision, not a requiremen
 for making or reviewing decks and not a general-purpose video editor.
 
 1. **Notes and timing belong to the selected revision.** Speaker notes remain
-   distinct from review comments. Narrated export uses the identified notes or an
+   distinct from review comments. Preparing narration is an optional writing
+   capability, independent of speech-provider support and ordinary deck creation.
+   It uses the full deck, audience, purpose, retained evidence and existing notes
+   to produce a coherent spoken story with sensible defaults; callers can guide
+   tone, emphasis and approximate length without supplying specialist prompts.
+   Presenter cues and exact spoken passages remain distinguishable. Prepared
+   scripts identify their source revision, references, limitations and review;
+   guided or manual edits create retained versions without changing slide notes,
+   earlier scripts or audio. Text changes invalidate affected review and audio
+   matching. Writing-time duration estimates are labeled; synthesis speaks the
+   selected script without editorial rewriting. Narrated export uses the identified notes or an
    explicitly selected adaptation; it does not silently rewrite them for duration.
    The retained timing plan maps slides to narration and clip segments. Measured speech
    duration, pauses, transitions and intended clip playback determine timing.
@@ -137,6 +147,11 @@ for making or reviewing decks and not a general-purpose video editor.
    revision, notes, assets, audio and timing choices. Completion checks the actual
    encoded output and reports playback, timing and audio checks separately from
    semantic review. It does not inherit a visual pass or acceptance from the deck.
+5. **Narrated delivery embeds audio by default.** Unless separate delivery is
+   requested, the video includes its narration track. An explicit post-production
+   package includes silent video, the complete narration track, individual slide
+   audio and a timing manifest. Both delivery modes use the same retained audio
+   and timing plan without new synthesis or different slide timing.
 
 ## Contract checks
 

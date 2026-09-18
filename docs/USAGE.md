@@ -377,7 +377,7 @@ can be parsed.
 Use `stories export-video` (or `Stories.export_video`) for a static presentation
 with retained images. This deterministic operation requires Pango and `ffmpeg`
 with `libx264` plus `ffprobe` on PATH (`brew install ffmpeg` on macOS). It never
-loads a model, synthesizes speech or adds an audio track.
+loads a model or synthesizes speech. Without a narration ID it produces no audio track.
 
 ```sh
 stories --store /path/to/store export-video --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","output_path":"/path/to/deck.mp4","slide_seconds":[10,20,20,20,20,10],"timeout_seconds":300}'
@@ -386,7 +386,7 @@ stories --store /path/to/store export-video --input '{"story_id":"STORY_ID","rev
 Supply exactly one duration per slide, in whole 30-fps frames (for example 10 or
 10.1 seconds). The output is 1280×720 H.264/yuv420p MP4 with cuts between slides.
 Pacing is explicit, not estimated from notes. Speaker notes are retained in the
-export timeline but never spoken. The result and `video_exported` event identify
+export timeline; this silent invocation does not speak them. The result and `video_exported` event identify
 the source revision, original assets, frame hashes, timeline and output hash.
 
 Scripts, CSS animations, animated images and embedded audio/video are rejected;
@@ -400,4 +400,144 @@ Encoding and verification share the requested timeout (1–900 seconds, default
 removed. The completed MP4 is published only after verification, and an existing
 output is never replaced. CLI interrupts use Ctrl-C; this synchronous deterministic
 export does not create a cancellable model operation. Video export is available
-through the library/CLI; the dashboard's export choices remain HTML and ZIP.
+through the library/CLI. Narrated video also has a dashboard flow described below.
+
+
+## Narration and video with audio
+
+Narration uses direct OpenAI or Gemini speech APIs, independently of the writing
+provider and Amplifier Agent. Configure speech separately for each Stories store:
+
+```sh
+stories --store /path/to/store narration-settings
+stories --store /path/to/store configure-narration --input '{"provider":"openai","voice":"marin","request_id":"voice-1"}'
+stories --store /path/to/store get-speaker-notes --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID"}'
+stories --store /path/to/store --model-env --execution background generate-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","grant":{"max_requests":12,"max_characters":24000,"timeout_seconds":300},"request_id":"narration-1"}'
+```
+
+OpenAI uses `OPENAI_API_KEY` (default model `gpt-4o-mini-tts`, voice `marin`).
+Gemini uses `GOOGLE_API_KEY`, falling back to `GEMINI_API_KEY` (default model
+`gemini-2.5-flash-preview-tts`, voice `Kore`). Model, voice and delivery instructions
+are configurable. Key presence does not prove speech access. Anthropic, ChatGPT
+and Copilot credentials are not speech credentials. Never send keys in JSON inputs.
+
+Speech requires explicit `--model-env` authority and a bounded grant. Defaults are
+12 requests, 24,000 text characters and 300 seconds; allowed maxima are 100 requests,
+200,000 characters and 900 seconds. Settings changes alone incur no speech call.
+Each slide must have nonempty notes of at most 4,000 characters. Omit `notes` to read
+`.notes` or `[data-speaker-notes]` from each `.slide`; alternatively supply a string
+array, one entry per slide, as an explicit narration adaptation. Stories retains
+that text without rewriting the revision or inventing missing notes.
+
+The example starts a background worker. The default execution mode is `queued`;
+for that mode explicitly call `run-operation` with provider-use authority. The
+receipt identifies an operation and narration. Use `get-operation` to poll and
+`cancel-operation` to stop; `list-narrations`, `get-narration` and
+`get-narration-audio` retrieve retained results, including completed slides after a
+partial failure. Audio is AI-generated, mono 24 kHz, 16-bit WAV. Review it before
+sharing: successful synthesis and decoding do not certify faithful pronunciation.
+
+Each operation freezes its text and voice settings. Identical text/settings reuse
+completed audio, even without credentials; only changed slides require new speech.
+Exact request retries return their original receipt. SDK retries are disabled.
+An uncertain provider response is not automatically resubmitted: another attempt
+requires a new request ID and `retry_uncertain: true`, which may incur another charge.
+Cancellation cannot undo a provider charge already in flight.
+
+Export an exact revision and its completed narration:
+
+```sh
+stories --store /path/to/store export-video --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","narration_id":"NARRATION_ID","output_path":"/path/to/narrated.mp4"}'
+stories --store /path/to/store export-video --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","narration_id":"NARRATION_ID","delivery":"separate","output_path":"/path/to/post-production.zip"}'
+```
+
+The default `delivery: "embedded"` produces H.264 MP4 with AAC audio. `separate`
+produces a ZIP containing `video.mp4` (silent), `narration.wav` (aligned full track),
+`slides/slide-NNN.wav` (original per-slide speech), `manifest.json` and a README.
+The manifest records notes, voice settings, audio hashes and sample/frame timing.
+Both modes reuse the same retained speech and render plan, with no new synthesis.
+
+Automatic timing uses actual speech duration plus `pause_seconds` (default 0.5,
+0–60), rounded up to whole 30-fps frames. Optional `slide_seconds` must leave room
+for that speech and pause; conflicting timing fails rather than truncating or
+speeding up audio. Notes remain tied to the selected revision. The static-rendering
+limits from silent export still apply. Encoding, stream inspection and full decoding
+are checked separately from visual review, listening and human acceptance.
+
+In the dashboard, open **Story details → Narration & video**. Review or edit each
+slide's narration, save speech settings, generate and listen to retained audio,
+and select embedded MP4 or a separate-assets ZIP. **Generate narration & export
+video** performs both steps. The viewer must have provider-use authority to generate
+new speech; export from retained speech needs none. Dashboard generation authorizes
+up to 12 calls, 48,000 text characters and 300 seconds. Closing the dialog preserves
+its notes draft for the session; it does not cancel an active operation.
+
+
+## Preparing a spoken story
+
+Presentation generation preserves supplied speaker notes but does not automatically
+create a voiceover. `prepare-narration` is an optional writing operation, using the
+configured writing provider through Amplifier Agent. It works with any supported
+writing-provider setup; OpenAI/Gemini speech support is only needed for synthesis.
+It does not call TTS, alter the deck, or replace its speaker notes.
+
+```sh
+stories --store /path/to/store --model-env --execution background prepare-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","grant":{"max_operations":1,"timeout_seconds":180,"max_output_tokens":12000},"request_id":"script-1"}'
+stories --store /path/to/store get-operation --input '{"operation_id":"OPERATION_ID"}'
+stories --store /path/to/store get-narration-script --input '{"story_id":"STORY_ID","script_id":"SCRIPT_ID"}'
+```
+
+The default script establishes why the audience should care, develops one main point
+per slide with explanation beyond its bullets, connects slides meaningfully, and
+ends with a supported takeaway. It uses concrete, speakable language and allocates
+attention by importance. It does not impose a sales pitch, invent personal experiences
+or read presenter cues. The entire deck, notes and retained sources go to the writing
+provider. Source/slide/notes references and limitations remain in script metadata;
+references to imported claims are not independent factual verification.
+
+Optional `guidance` (up to 8000 characters) steers tone, emphasis or changes.
+`draft_notes` may provide current editable passages, one per slide, including empty
+entries; preparation uses them rather than silently reverting to an older script.
+`target_seconds` (10–7200) gives an approximate total writing target; omitted means
+content-led pacing. Results include a rough estimate at 140 words/minute, not actual
+speech duration. Source-fidelity and spoken-story model review share the writing
+allowance, with one repair and re-review at most: up to four model calls. Failed
+candidates and findings remain on the operation. This review is not human approval,
+a listening check or evidence of audience comprehension. Poll/cancel as for other
+writing operations. Queued mode requires explicit `run-operation`; retries never
+restart completed or uncertain work.
+
+Refine with `prepare-narration` using `base_script_id` and new guidance/request ID.
+Or use `save-narration-script` with an ordered `notes` string array and optional
+`base_script_id` to retain direct edits without a model call. Edits create new script
+identities and do not inherit prior model review. `list-narration-scripts` lists
+versions for a story or exact revision. Earlier scripts and audio remain available.
+
+```sh
+stories --store /path/to/store --model-env --execution background prepare-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","base_script_id":"SCRIPT_ID","guidance":"Make the opening warmer and focus on why the work matters.","target_seconds":120,"grant":{},"request_id":"script-2"}'
+stories --store /path/to/store --model-env --execution background generate-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","script_id":"SCRIPT_ID","grant":{"max_requests":12,"max_characters":24000,"timeout_seconds":300},"request_id":"speech-from-script-1"}'
+```
+
+For a narrated-video request, prepare a script when the notes are not already a
+finished spoken story, then synthesize the selected script and export its audio.
+Preparation does not impose an additional approval gate: continue under the caller's
+existing authority. `script_id` and explicit `notes` are mutually exclusive in
+`generate-narration`; omitting both preserves the existing verbatim-speaker-notes
+behavior. Speech and video identify the selected script and hash. Changing a script
+requires an explicit new synthesis operation, reusing unchanged slide audio.
+
+The dashboard provides **Prepare / refine script**, optional guidance and duration,
+script versions, editable passages and **Save script edits**. This is separate from
+speech settings and generation; preparing never synthesizes. New results cannot
+overwrite text edited while writing was in progress. Scripts can be prepared and
+read without a speech API key. Use writing Settings to choose the writing provider.
+
+
+Speech synthesis runs up to three distinct slide requests concurrently by default.
+Set `concurrency` (1–8) on `generate-narration` to change that limit. All requests
+share the same total request/character budget and operation deadline. Identical
+text and voice settings within a run share one synthesis request. Completed audio
+is retained by its actual slide number, even when earlier slides fail or finish
+later; video assembly uses slide order. One failed request does not discard or
+cancel successful work on other slides. Cancellation stops all active requests
+and prevents waiting work from starting; in-flight provider charges may still occur.

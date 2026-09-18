@@ -97,3 +97,15 @@ DOCUMENT_GENERATION = obj(
     {**DOCUMENT_COMPOSITION["properties"], "action": GENERATION["properties"]["action"]}
 )
 DOCUMENT_REPAIR = obj({**DOCUMENT_COMPOSITION["properties"], "action": REPAIR["properties"]["action"]})
+
+NARRATION_SCRIPT = obj(
+    {
+        "throughline": TEXT,
+        "slides": {
+            "type": "array",
+            "items": obj({"slide": {"type": "integer"}, "text": TEXT, "references": TEXTS}),
+        },
+        "limitations": TEXTS,
+    }
+)
+NARRATION_REVIEW = obj({"source_fidelity": SECTION, "spoken_story": SECTION})

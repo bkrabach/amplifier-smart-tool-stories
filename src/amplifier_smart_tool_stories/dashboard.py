@@ -53,7 +53,9 @@ class Dashboard:
                 )
                 if attachment:
                     extension = (
-                        "zip"
+                        "mp4"
+                        if mime == "video/mp4"
+                        else "zip"
                         if mime == "application/zip"
                         else "pdf"
                         if mime == "application/pdf"
@@ -80,6 +82,7 @@ class Dashboard:
                     "/app.js": ("dashboard.js", "text/javascript"),
                     "/style.css": ("dashboard.css", "text/css"),
                     "/document-view.js": ("document-view.js", "text/javascript"),
+                    "/narration.js": ("narration.js", "text/javascript"),
                     "/provider-settings.js": ("provider-settings.js", "text/javascript"),
                     "/comparison.js": ("comparison.js", "text/javascript"),
                     "/bridge.js": ("bridge.js", "text/plain"),
@@ -109,6 +112,29 @@ class Dashboard:
                             "story": owner.api.get_story(owner.story_id),
                             "revision_id": owner.revision_id,
                         }
+                    elif path == "/api/narration-settings":
+                        result = {**owner.api.narration_settings(), "model_access": owner.api.model_env}
+                    elif path == "/api/configure-narration":
+                        result = owner.api.configure_narration(**data)
+                    elif path == "/api/narrated-download":
+                        import tempfile
+
+                        require(
+                            set(data) <= {"revision_id", "narration_id", "delivery", "pause_seconds"},
+                            "Unknown export input.",
+                        )
+                        require(data.get("narration_id"), "Choose completed narration first.")
+                        ext = ".zip" if data.get("delivery") == "separate" else ".mp4"
+                        with tempfile.TemporaryDirectory(dir=owner.api.store.path) as folder:
+                            result = owner.api.export_video(
+                                story_id=owner.story_id,
+                                output_path=str(Path(folder) / ("narrated" + ext)),
+                                **data,
+                            )
+                            self.send(
+                                200, Path(result["path"]).read_bytes(), result["mime_type"], attachment=True
+                            )
+                        return
                     elif path == "/api/provider-settings":
                         result = {**owner.api.provider_settings(), "model_access": owner.api.model_env}
                     elif path == "/api/configure-provider":
@@ -153,6 +179,16 @@ class Dashboard:
                         require(
                             name
                             in {
+                                "prepare_narration",
+                                "get_narration_script",
+                                "list_narration_scripts",
+                                "save_narration_script",
+                                "generate_narration",
+                                "get_narration",
+                                "list_narrations",
+                                "get_narration_audio",
+                                "get_speaker_notes",
+                                "cancel_operation",
                                 "get_story",
                                 "get_comparison",
                                 "select_direction",
@@ -167,10 +203,14 @@ class Dashboard:
                             },
                             "Unknown route.",
                         )
-                        if name == "get_operation":
+                        if name in {"get_operation", "cancel_operation"}:
                             op = owner.api.get_operation(data["operation_id"])
                             require(op["story_id"] == owner.story_id, "Wrong story.")
-                            result = op
+                            result = (
+                                owner.api.cancel_operation(data["operation_id"])
+                                if name == "cancel_operation"
+                                else op
+                            )
                         else:
                             data["story_id"] = owner.story_id
                             if name == "add_comment":

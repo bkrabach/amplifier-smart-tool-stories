@@ -95,6 +95,7 @@
       <p id="exportLimit"></p>
       <p id="mediaDetails" style="white-space:pre-line"></p>
       <button id="export">Export this version</button>
+      <button id="narrationOpen">Narration &amp; video</button>
       <button id="acceptRevision">Accept this revision</button>
       <p id="acceptanceStatus" role="status"></p>
       <h3>Sources & checks</h3>
@@ -157,6 +158,41 @@
     <div id="error" role="alert" hidden></div>
     <script src="/app.js"></script>
     <script src="/comparison.js"></script>
+    <dialog id="narrationDialog" aria-labelledby="narrationHeading">
+      <div class="row"><h2 id="narrationHeading">Narration &amp; video</h2><button id="narrationClose">Close</button></div>
+      <p id="narrationRevision"></p>
+      <p>AI-generated voice. Generating audio sends the selected script and delivery instructions to the selected provider's paid speech API. Reusing completed audio makes no speech request.</p>
+      <h3>Prepare the spoken story</h3>
+      <p>Uses your writing provider, independently of speech support. Slides and speaker notes stay unchanged. Prepare a script, guide a revision, or edit the text directly.</p>
+      <p id="scriptWritingProvider"></p>
+      <label for="scriptVersions">Spoken script version</label><select id="scriptVersions"><option value="">Use current text</option></select>
+      <label for="scriptGuidance">What should change? (optional)</label><textarea id="scriptGuidance" rows="2" placeholder="For example: focus on why the work matters; make it warmer and shorter."></textarea>
+      <label for="scriptDuration">Approximate total duration in seconds (optional)</label><input id="scriptDuration" type="number" min="10" max="7200" placeholder="Let the story determine the length">
+      <button id="scriptPrepare">Prepare / refine script</button><button id="scriptCancel" disabled>Cancel writing</button>
+      <p id="scriptStatus" role="status"></p>
+      <p id="scriptDetails"></p>
+      <h3>Spoken script</h3><p>These are the words to speak, one passage per slide. Existing speaker notes are a starting point; preparing a script adapts them for video. Direct edits create a new retained script when saved or synthesized.</p>
+      <div id="speechNotes"></div><button id="scriptSave">Save script edits</button>
+      <h3>Speech settings</h3>
+      <label for="speechProvider">Narration provider</label><select id="speechProvider"><option value="openai">OpenAI</option><option value="gemini">Gemini</option></select>
+      <label for="speechModel">Speech model</label><input id="speechModel">
+      <label for="speechVoice">Voice</label><input id="speechVoice">
+      <label for="speechInstructions">Delivery instructions</label><textarea id="speechInstructions" rows="2"></textarea>
+      <button id="speechApply">Save narration settings</button>
+      <p id="speechAvailability"></p>
+
+      <label><input id="speechRetry" type="checkbox">Retry a previously uncertain request (may incur another charge)</label>
+      <p>Per request: up to 12 speech calls, 3 at a time, 48,000 text characters, and 300 seconds.</p>
+      <button id="speechGenerate">Generate narration</button><button id="speechGenerateExport">Generate narration &amp; export video</button><button id="speechCancel" disabled>Cancel synthesis</button>
+      <p id="speechStatus" role="status"></p>
+      <label for="speechVersions">Retained narration</label><select id="speechVersions"></select>
+      <div id="speechAudio"></div>
+      <label for="speechDelivery">Video delivery</label><select id="speechDelivery"><option value="embedded">MP4 with narration embedded</option><option value="separate">Post-production ZIP · separate video and audio</option></select>
+      <label for="speechPause">Pause after each slide (seconds)</label><input id="speechPause" type="number" min="0" max="60" step="0.1" value="0.5">
+      <button id="speechExport" disabled>Export using retained narration</button>
+      <p id="speechExportStatus" role="status"></p>
+    </dialog>
     <script src="/provider-settings.js"></script>
+    <script src="/narration.js"></script>
   </body>
 </html>

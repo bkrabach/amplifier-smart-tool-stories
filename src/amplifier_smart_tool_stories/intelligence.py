@@ -109,6 +109,17 @@ def execute(story, operation, cancelled):
 
                 return await compose(story, operation, ask, calls)
 
+            if operation.get("kind") == "prepare_narration":
+                from .script_intelligence import prepare
+
+                result = await prepare(story, operation, ask)
+                result["provenance"] = {
+                    "runtime": "amplifier-agent",
+                    "calls": calls,
+                    "model_calls": len(calls),
+                }
+                return result
+
             catalog, excerpts = source_excerpts(story["sources"])
             note = next((n for n in story["annotations"] if n["id"] == operation["annotation_id"]), None)
             # Evidence is extracted and checked BEFORE the composition/revision stage.

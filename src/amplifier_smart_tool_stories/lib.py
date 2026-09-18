@@ -12,11 +12,13 @@ from pathlib import Path
 from .artifacts import digest, evidence_checked, parse_html, preview, validate_anchor
 from .errors import StoriesError, require
 from .media import MediaLibrary, bindings, select, warnings_for
+from .scripts import ScriptLibrary
+from .speech import NarrationLibrary
 from .store import Store, identity, now
 from .storyboard_library import StoryboardLibrary
 
 
-class Stories(StoryboardLibrary, MediaLibrary):
+class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
     def __init__(
         self,
         storage=None,
@@ -560,6 +562,10 @@ class Stories(StoryboardLibrary, MediaLibrary):
             if op["state"] in {"queued", "running"}:
                 op["cleanup"] = "complete" if op["state"] == "queued" else "pending"
                 op["state"] = "cancelled"
+                if op.get("narration_id"):
+                    narration = self.store.get(db, "narrations", op["narration_id"])
+                    narration["state"] = "cancelled"
+                    self.store.put(db, "narrations", narration)
                 self.store.put(db, "operations", op)
                 story = self.store.get(db, "stories", op["story_id"])
                 for note in story["annotations"]:
@@ -575,6 +581,10 @@ class Stories(StoryboardLibrary, MediaLibrary):
 
     def run_operation(self, operation_id):
         """Execute one queued operation once. Requires model_env or an explicitly injected intelligence adapter."""
+        if self.get_operation(operation_id)["kind"] == "narration":
+            from .speech import run_narration
+
+            return run_narration(self, operation_id)
         with self.store.transaction() as db:
             op = self.store.get(db, "operations", operation_id)
             if op["state"] != "queued":
@@ -623,6 +633,36 @@ class Stories(StoryboardLibrary, MediaLibrary):
                 story = self.store.get(db, "stories", op["story_id"])
                 if story.get("kind") == "storyboard":
                     return self._commit_storyboards(db, story, current, result)
+                if op["kind"] == "prepare_narration":
+                    from .scripts import retain
+
+                    script = retain(
+                        self,
+                        db,
+                        story,
+                        self._revision(story, op["revision_id"]),
+                        result,
+                        origin="model",
+                        base_script_id=op.get("base_script_id"),
+                        guidance=op["guidance"],
+                        target_seconds=op["target_seconds"],
+                    )
+                    current.update(
+                        state="succeeded",
+                        finished_at=now(),
+                        cleanup="complete",
+                        result={"script_id": script["id"], "revision_id": op["revision_id"]},
+                    )
+                    self.store.put(db, "operations", current)
+                    self.store.event(
+                        db,
+                        story["id"],
+                        "operation_completed",
+                        operation_id=operation_id,
+                        script_id=script["id"],
+                        revision_id=op["revision_id"],
+                    )
+                    return current
                 require(
                     isinstance(result, dict) and result.get("action") in {"answer", "clarify", "revise"},
                     "Invalid structured model submission.",
@@ -788,15 +828,42 @@ class Stories(StoryboardLibrary, MediaLibrary):
             raise StoriesError("output_exists", "Output already exists; choose a new destination.") from None
         return {"status": "succeeded", "path": str(path), **result}
 
-    def export_video(self, story_id, revision_id, output_path, slide_seconds, timeout_seconds=300):
-        """Export static presentation slides as silent H.264 MP4 with explicit per-slide pacing; no TTS."""
+    def export_video(
+        self,
+        story_id,
+        revision_id,
+        output_path,
+        slide_seconds=None,
+        timeout_seconds=300,
+        narration_id=None,
+        delivery="embedded",
+        pause_seconds=0.5,
+    ):
+        """Export slides as silent MP4, or use retained narration for embedded MP4 (default) or separate assets ZIP."""
         from .media import image_payload
         from .video import encode
 
         revision = self.get_revision(story_id, revision_id)
         with self.store.transaction() as db:
             media = image_payload(db, revision.get("assets", []))
-        result = encode(revision, media, output_path, slide_seconds, timeout_seconds)
+        if narration_id:
+            from .narrated_video import export
+
+            narration = self.get_narration(story_id, narration_id)
+            result = export(
+                self,
+                revision,
+                media,
+                narration,
+                output_path,
+                slide_seconds,
+                pause_seconds,
+                delivery,
+                timeout_seconds,
+            )
+        else:
+            require(delivery == "embedded", "Separate delivery requires retained narration.")
+            result = encode(revision, media, output_path, slide_seconds, timeout_seconds)
         result["story_id"] = story_id
         with self.store.transaction() as db:
             self.store.event(
@@ -893,12 +960,13 @@ class Stories(StoryboardLibrary, MediaLibrary):
                     in {
                         "generate",
                         "generate_storyboard",
+                        "prepare_narration",
                         "answer_question",
                         "run_operation",
                         "test_provider",
                     }
                     else "conditional"
-                    if name in {"add_comment", "respond"}
+                    if name in {"add_comment", "respond", "generate_narration"}
                     else "deterministic",
                 }
                 for name in CAPABILITIES
@@ -907,6 +975,17 @@ class Stories(StoryboardLibrary, MediaLibrary):
 
 
 CAPABILITIES = [
+    "prepare_narration",
+    "get_narration_script",
+    "list_narration_scripts",
+    "save_narration_script",
+    "get_speaker_notes",
+    "list_narrations",
+    "narration_settings",
+    "configure_narration",
+    "generate_narration",
+    "get_narration",
+    "get_narration_audio",
     "export_video",
     "manifest",
     "create_storyboard",

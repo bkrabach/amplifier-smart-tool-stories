@@ -103,6 +103,10 @@ Comparison of storyboard directions follows the
    a distinct documented operation with its own prerequisites and checks; its result
    does not silently replace the displayed original. Export never applies unsubmitted
    feedback, overwrites an earlier result without permission, or publishes content.
+   Narration preparation uses writing settings independently of speech support.
+   People can prepare a script with defaults, guide refinement, edit passages and
+   return to earlier script versions on the selected revision. Incoming writing
+   results preserve newer unsent edits; opening controls never starts writing.
    Narrated export distinguishes generating new speech from reusing retained audio
    or downloading an existing video. The selected notes, narration settings and
    timing choices remain identifiable; opening export controls does not synthesize
