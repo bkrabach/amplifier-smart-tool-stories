@@ -246,7 +246,7 @@ async function render(frame, id, isMain) {
       }
       resolve();
     };
-    frame.src = blobURL(new Blob([html], { type: "text/html" }));
+    frame.src = blobURL(new Blob([html], { type: "text/html;charset=utf-8" }));
   });
   return p;
 }

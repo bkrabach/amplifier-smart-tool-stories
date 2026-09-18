@@ -41,7 +41,7 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
         api = Stories(tmp_path)
         deck = api.create_story(
             "Portable slide navigation",
-            '<html><body><section class="slide"><h1>First</h1><img src="asset:'
+            '<html><body><section class="slide"><h1>First · Café — 日本語 🧭</h1><img src="asset:'
             + ids["asset_id"]
             + '"></section><section class="slide"><h1>Second</h1></section></body></html>',
             "browser-slide-deck",
@@ -134,6 +134,15 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
             # Agent navigation uses the same durable operation, then polling applies it.
             await frame.locator("#stories").select_option(deck["story_id"])
             await expect(frame.locator("#notice")).to_contain_text("Ready")
+            await expect(frame.frame_locator("#preview").locator("h1").first).to_have_text(
+                "First · Café — 日本語 🧭"
+            )
+            assert (
+                await frame.frame_locator("#preview")
+                .locator("html")
+                .evaluate("element => element.ownerDocument.characterSet")
+                == "UTF-8"
+            )
             current = api.get_review_view(deck["story_id"])
             await client.call_tool(
                 "stories_update_review_view",
