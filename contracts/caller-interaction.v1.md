@@ -34,6 +34,8 @@ and its lifecycle are defined in the [dashboard contract](dashboard.v1.md).
 
 Supplied media, asset choices and portable delivery extend this boundary under the
 [media and delivery contract](media-delivery.v1.md).
+Guided ideation and alternative visual sequences extend it under the
+[storyboard exploration contract](storyboard-exploration.v1.md).
 
 ## Core (the teeth)
 
@@ -43,6 +45,10 @@ Supplied media, asset choices and portable delivery extend this boundary under t
    context such as tone, length, brand guidance and desired emphasis. It need not
    name specialists, provide workflow prompts or orchestrate production stages.
    Stories reports unsupported requirements rather than silently substituting them.
+   For exploration, usable rough ideas and explicitly supplied conversation context
+   are valid inputs. The tool develops provisional intent, assumptions and open
+   choices without requiring a completed brief or specialist terminology. Focused
+   questions resolve consequential gaps rather than outsourcing creative exploration.
 2. **Context crosses the boundary explicitly.** Stories assumes no access to the
    caller's conversation, filesystem or model session. It accepts source content
    and, where supported, explicitly scoped references. Caller summaries, hypotheses
@@ -132,10 +138,41 @@ Supplied media, asset choices and portable delivery extend this boundary under t
     comments to responses, operations and resulting revisions so a returning caller
     can see what occurred and avoid repeating it.
 
+14. **Exploration and selection have public identities.** Callers can retrieve the
+    developing brief, alternative directions, each direction's revisions and open
+    questions. Feedback identifies its direction, revision and supported panel or
+    other material target. Comparing or focusing a preview is not direction selection.
+    Selection records the person's expressed choice or a choice within explicitly
+    delegated authority; it is distinct from revision acceptance, generation and
+    export, and grants no additional spending authority. Earlier alternatives remain
+    available. A fresh caller can continue from these records without replaying the
+    conversation. These actions retain the same retry and observation semantics as
+    other public mutations and reads.
+    Across formats, ordinary creation develops one direction; generating alternatives
+    requires user intent to explore or compare, conveyed through the caller in natural
+    language or equivalent explicit scope. Uncertainty alone is not such a request.
+    The tool may offer lightweight possibilities or suggest comparison without
+    automatically generating multiple artifacts. Refinement preserves the chosen
+    direction unless the person steers back toward exploration.
+15. **Shared intent and local feedback have different scope.** Refining one direction
+    does not silently rewrite its siblings. A correction to shared intent records a
+    new brief revision and identifies affected directions as updated or superseded.
+    It does not leave contrary material appearing current or implicitly authorize
+    regeneration. Combining alternatives preserves the identified source revisions
+    and records the resulting work without replacing its originals.
+
 ## Stories acceptance checks
 
 These are proposed contract checks, not work items or claims of conformance:
 
+- Compare and focus without selecting; record an explicit direction choice and
+  retrieve it through a fresh caller. Refine its exact revision without changing
+  sibling directions or inheriting acceptance from the base.
+- Ordinary creation and uncertain briefs do not automatically generate alternatives.
+  Natural-language requests to explore different approaches activate supported
+  comparison workflows without requiring special commands or terminology.
+- Correct shared intent and identify affected alternatives as updated or superseded;
+  retain prior brief/revision context and never spend beyond existing authority.
 - A caller using only public documentation creates, inspects and revises a supported
   artifact through both library and CLI without internal prompts or session access.
 - A caller summary with an inaccessible original remains labeled as supplied context;

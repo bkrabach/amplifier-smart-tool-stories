@@ -17,6 +17,26 @@ defined by a single rendering format.
 Stories brings together writing, images, and video to create communication people
 can read, present, or watch.
 
+Stories also helps people develop rough ideas into visual sequences. The caller
+carries the conversation; the tool brings expertise in audience, narrative, visual
+explanation, pacing and evidence. A person need not know storyboarding terminology
+or arrive with a completed brief. Creation normally develops one direction across
+storyboards, documents and presentations. When the person steers toward exploring
+alternatives, Stories offers meaningful directions to compare and develop. Uncertainty
+can prompt a suggestion to compare, not automatic generation of multiple artifacts.
+Outlines, partly illustrated sequences and
+visual storyboards are useful stages of the same work; detail serves the decision
+rather than a mandatory production sequence. Choosing a direction focuses effort
+without erasing alternatives or implying acceptance of a finished revision.
+
+Storyboarding serves different media and purposes, including comics, motion graphics,
+technical explanations and customer stories. Shared storytelling expertise supports
+these uses without requiring a separate mode for each. A storyboard plans an
+experience; it does not imply production of the finished video, animation or comic.
+Image generation is a shared media capability for storyboards, documents and
+presentations. Supplied, generated and planned visuals remain distinguishable, and
+reviewed images are retained rather than regenerated when work is reopened.
+
 Stories is a Smart Tool: a reusable library with a thin command-line interface and
 its own model-backed execution. Its callers use `stories` or import its Python
 library without adopting a particular agent environment or supplying specialist
@@ -42,6 +62,12 @@ answers and changes are observable to the caller; unsubmitted drafts remain dist
 from instructions. Recording an action does not promise to wake the calling agent.
 Existing valid authority can cover requested refinement without repeated approval.
 
+The review workspace supports comparing alternatives side by side, focusing on one
+without selecting it, and explicitly choosing a direction. Each format has its own
+appropriate view within that shared interaction. Storyboard exploration introduces
+this comparison workflow; generating alternative documents and presentations remains
+a later capability, separate from their support in the comparison viewer.
+
 The material fills the review surface; review controls stay secondary. Opening a
 comment never moves or resizes the material. An optional review overlay lets the
 person select text or an element directly and leave a comment,
@@ -61,6 +87,8 @@ comments, actions and revisions later.
 
 Numbers, attribution and impact claims stay tied to sources. Missing evidence remains
 visible; a persuasive narrative does not turn estimates into measurements.
+Fictional scenes, visual metaphors and imagined possibilities may be created as such;
+they do not become evidence of real events or product behavior.
 
 ### 2. **The expertise lives inside the tool.**
 
@@ -116,6 +144,10 @@ preserving retained results for a later return.
 
 ## How you can tell it is working
 
+- A person with a rough idea can compare meaningful story directions and develop a
+  sequence without supplying specialist prompts or learning storyboard terminology.
+- The same foundation supports different communication purposes and levels of visual
+  detail without forcing every story into a demo, film or marketing template.
 - A caller obtains a usable artifact in their own environment without importing
   Stories expertise into their own prompts.
 - A reader can trace factual claims to sources and see what remains unknown.
@@ -129,6 +161,8 @@ preserving retained results for a later return.
 
 ## Changelog
 
+- **2026-09-18** — Added general-purpose storyboard exploration, shared comparison
+  and image generation across formats as intended capabilities, not support claims.
 - **2026-09-16** — Added the optional built-in review workspace, shared caller state,
   provider settings, revision continuity and explicit presentation lifecycle.
 - **2026-09-09** — First draft; no lock or implementation claim.

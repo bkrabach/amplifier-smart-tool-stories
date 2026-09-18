@@ -24,6 +24,10 @@ The [caller-interaction contract](caller-interaction.v1.md) defines context,
 clarification and revision continuity; the
 [internal execution contract](internal-execution.v1.md) defines enforcement behind
 that public boundary.
+The [storyboard exploration](storyboard-exploration.v1.md) and
+[media and delivery](media-delivery.v1.md) contracts use this same boundary. Their
+draft requirements do not advertise implemented commands, image providers or export
+formats; public help and manifests describe only supported, validated behavior.
 
 ## Core (the teeth)
 

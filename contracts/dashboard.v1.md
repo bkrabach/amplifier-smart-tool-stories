@@ -34,6 +34,8 @@ or requiring a full document, spreadsheet or slide editor.
 Media playback, asset isolation and export choices are specified in the
 [media and delivery contract](media-delivery.v1.md). Static preview support does not
 establish playback support.
+Comparison of storyboard directions follows the
+[storyboard exploration contract](storyboard-exploration.v1.md).
 
 ## Core (the teeth)
 
@@ -172,10 +174,33 @@ establish playback support.
     draft. Browser page boundaries are approximate and must not be represented as
     proof of Word or PDF pagination.
 
+17. **Comparison is shared across formats.** The workspace supports side-by-side
+    alternatives, focused inspection of either and return to comparison, with
+    format-appropriate views for storyboards, HTML presentations and documents.
+    Storyboard views support outlines, mixed sequences and illustrated panels.
+    Comparison does not assume matching panel/page counts or imply correspondence
+    merely from position. Supporting document/presentation views does not require
+    generating alternatives for those formats; that capability remains deferred.
+    Comparison is available when requested, not the default creation/review flow for
+    any format. Opening its controls does not itself generate additional directions.
+18. **Focus, direction choice and acceptance remain distinct.** Inspecting an
+    alternative does not select it. Explicit direction selection is observable to
+    the caller and retains other alternatives and their revision histories. It does
+    not accept an artifact or initiate uncovered work. Comments, saved drafts and
+    exports identify their actual direction/revision and material target. Background
+    results do not switch the focused alternative. Explicit comparison/focus changes
+    may change layout while preserving review context and drafts; opening a comment
+    still must not move or resize the material.
+
 ## Stories acceptance checks
 
 Proposed checks only; these do not establish current support:
 
+- Compare outlines and mixed storyboards, focus either direction, return and choose
+  explicitly. Retrieve the choice and correctly targeted comments through the CLI.
+- Exercise storyboard, presentation and document comparison views with unequal
+  lengths. Preserve drafts and exact export targets during view changes and incoming
+  revisions; no model work occurs merely to inspect retained alternatives.
 - Create headlessly, open by identity, inspect the actual artifact, submit feedback,
   retrieve the receipt through the CLI, refine and export the selected revision.
 - Refresh after saving a draft and after submitting feedback. Preserve both with
@@ -224,6 +249,8 @@ HTTP success alone does not establish usable review.
 
 ## Changelog
 
+- **2026-09-18** — Added shared alternative comparison, format-appropriate views
+  and explicit direction selection, distinct from focus and revision acceptance.
 - **2026-09-16** — Added optional bidirectional annotation overlays, contextual
   comment handling by internal intelligence and uninterrupted review during updates.
 - **2026-09-16** — First draft defining the optional built-in story review workspace,

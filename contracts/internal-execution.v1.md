@@ -30,6 +30,8 @@ commands. Externally useful domain capabilities remain library-accessible.
 
 The [media and delivery contract](media-delivery.v1.md) extends these
 obligations to retained assets, rendering budgets, packaging and timed exports.
+The [storyboard exploration contract](storyboard-exploration.v1.md) extends them to
+alternative directions and structured visual sequences.
 
 ## Core (the teeth)
 
@@ -74,6 +76,11 @@ obligations to retained assets, rendering budgets, packaging and timed exports.
    Required checks must concern the submitted revision. Missing or invalid artifacts
    cannot become success because the model says they are done. Documented partial
    outcomes enumerate completed and missing parts; other incomplete work fails.
+   Storyboard validation includes panel identities, ordering, asset references and
+   the targeted direction/revision. A planned visual is not a produced asset; an
+   intentionally unillustrated panel is valid only at a fidelity that permits it.
+   One completed direction is not a completed two-direction comparison. Preserve
+   useful completed work while identifying missing candidates and failed checks.
 7. **Review reports its actual strength.** Structural checks, source-fidelity review
    and rendered usability are separate findings. Records identify what was inspected,
    the method used, its result and limits; skipped, failed and stale checks are not
@@ -88,6 +95,8 @@ obligations to retained assets, rendering budgets, packaging and timed exports.
    Late results cannot commit into a cancelled or superseded operation. Recovery
    distinguishes already committed work from uncertain external calls and requires
    valid authority before new spending; a checkpoint is not permission to restart.
+   Alternative generation, image generation, review and repairs share the authorized
+   operation allowance. Independent candidates cannot multiply that allowance.
 9. **Resources and publication remain controlled.** Imports and deterministic paths
    do not boot intelligence. Credentials remain outside source records and artifacts.
    Temporary work, retained state and requested outputs use their designated locations;
@@ -119,6 +128,9 @@ These are proposed contract checks, not work items or claims of conformance:
   cannot be invented by an internal submission.
 - Retry or specialist fan-out cannot increase a shared allowance. Cancellation
   prevents late commits, and recovery does not silently repeat uncertain spending.
+- Fail an alternative or image-generation step and report incomplete requested work
+  without discarding valid candidates or treating a prompt as an image. Verify exact
+  panel, asset and direction/revision targets independently of model prose.
 - Provider-free deterministic paths work without runtime initialization; failures
   clean up owned temporary resources and preserve committed and caller-owned data.
 
@@ -136,5 +148,7 @@ examples as required by the storytelling contract.
 
 ## Changelog
 
+- **2026-09-18** — Extended validation and shared bounds to storyboard alternatives
+  and image generation; partial comparisons remain explicitly incomplete.
 - **2026-09-16** — First draft of internal execution obligations. No tool catalog,
   implementation choice or bundle parity claim is frozen.

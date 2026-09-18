@@ -27,15 +27,21 @@ evidence and checks remain tied to the submitted artifact.
 
 The [media and delivery contract](media-delivery.v1.md) applies these
 requirements to images, clips, speaker notes and narrated presentation exports.
+The [storyboard exploration contract](storyboard-exploration.v1.md) extends them to
+rough ideas, alternative directions and progressively developed visual sequences.
 
 ## Core (the teeth)
 
 1. **A request describes the communication goal and audience.** Stories accepts
    source content rather than requiring callers to supply specialist prompts or
    understand the source bundle's agent names.
+   Exploration can start from usable creative intent without factual source material.
 2. **Factual generation follows evidence extraction.** Before writing, the workflow
    identifies supported facts, source references and missing information.
    A missing required input produces a clear failure or a documented partial outcome.
+   This does not prohibit explicitly fictional scenes, conceptual illustrations or
+   candidate narrative structures. Creative proposals and hypothetical situations
+   remain distinguishable from factual assertions and observed product behavior.
 3. **Factual claims preserve their support and limits.** Numbers, dates, attribution,
    quotes and impact claims trace to source evidence; estimates retain qualifiers.
    Unsupported measurements or conclusions are omitted or identified as unknown,
@@ -56,6 +62,13 @@ requirements to images, clips, speaker notes and narrated presentation exports.
 8. **Support is advertised from evidence, not inventory.** A published capability
    lists its supported outcomes, source inputs, dependencies and known limits.
    Copying an agent prompt, template or converter does not establish feature parity.
+9. **Shared expertise serves the audience and purpose.** The tool applies audience
+   understanding, narrative structure, visual explanation, sequence, pacing and
+   evidence discipline across supported uses. No single demo, film or marketing
+   formula defines storyboarding. Alternatives must make their material differences
+   inspectable at the requested fidelity; structural validity and stylistic variation
+   alone do not establish useful creative choice. Review distinguishes narrative
+   judgment and audience-comprehension evidence from source and rendering checks.
 
 ## What v1 deliberately does NOT freeze
 
@@ -81,6 +94,11 @@ upstream Smart Tools conformance kit rather than describing what that kit proves
   as completed requested outputs; partial results list what is missing.
 - Clause 6: omitted checks remain visibly unperformed in the result.
 - Clause 8: advertised capabilities have matching accepted scenario evidence.
+- Creative outlines without factual sources remain useful while unsupported real
+  claims are rejected or qualified. Illustrative scenes never become customer proof.
+- Evaluate meaningful alternatives and intelligible sequences across different
+  purposes and media. Report human judgments and untested audience understanding
+  separately from model review or a structurally valid artifact.
 
 Source-fidelity review needs recorded reviewer judgments; layout needs rendered
 evidence. Neither is replaced by schema checks or a model grading its own output.
