@@ -37,7 +37,8 @@ def test_import_anchor_export_and_retry(api, tmp_path):
         api.add_comment(sid, rid, "bad", "bad", {**anchor, "quote": "invented"})
     output = tmp_path / "export.html"
     api.export(sid, rid, str(output))
-    assert output.read_text() == HTML
+    assert "data-stories-presentation" in output.read_text()
+    assert "Check benchmark scope" not in output.read_text()
     with pytest.raises(StoriesError):
         api.export(sid, rid, str(output))
     assert api.get_story(sid)["annotations"][0]["anchor"] == anchor

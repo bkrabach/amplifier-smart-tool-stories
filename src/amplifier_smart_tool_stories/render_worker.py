@@ -12,13 +12,26 @@ from contextlib import redirect_stdout
 from .artifacts import parse_html, preview
 
 
-def render(html, include_pdf=False):
+def render(html, include_pdf=False, media=None):
     import pypdfium2 as pdfium
     from weasyprint import CSS, HTML
-    from weasyprint.urls import URLFetcher
+    from weasyprint.urls import URLFetcher, URLFetcherResponse
 
-    clean, _ = preview(html)
+    media = media or {}
+    clean, _ = preview(html, [{"id": key[6:]} for key in media])
     soup = parse_html(clean)
+    for video in soup.select("video"):
+        if video.get("poster") in media:
+            poster = soup.new_tag("img", src=video["poster"])
+            for key in ("style", "width", "height", "class"):
+                if video.get(key):
+                    poster[key] = video[key]
+            poster["alt"] = "Video poster (playback not inspected)"
+            video.replace_with(poster)
+        else:
+            video.clear()
+            video.string = "[Video: playback and audio not inspected]"
+    clean = str(soup)
     slides = soup.select(".slide")
     document = bool(soup.select_one("article.stories-document"))
     if len(slides) > 12:
@@ -32,6 +45,10 @@ def render(html, include_pdf=False):
 
     class NoFetch(URLFetcher):
         def fetch(self, url, headers=None):
+            if url in media and media[url]["mime_type"].startswith("image/"):
+                return URLFetcherResponse(
+                    url, base64.b64decode(media[url]["data"]), {"Content-Type": media[url]["mime_type"]}
+                )
             denied.append(str(url).split(":", 1)[0])
             raise ValueError("Resource fetching disabled")
 
@@ -120,9 +137,9 @@ if __name__ == "__main__":
 
         resource.setrlimit(resource.RLIMIT_CPU, (35, 35))
         # JSON escaping can expand a valid 2 MB artifact by up to six times.
-        value = json.loads(sys.stdin.read(12_100_000))
+        value = json.loads(sys.stdin.read(300_000_000))
         with redirect_stdout(io.StringIO()):
-            result = render(value["html"], value.get("include_pdf", False))
+            result = render(value["html"], value.get("include_pdf", False), value.get("media"))
         print(json.dumps(result))
     except Exception as exc:
         print(json.dumps({"error": f"Static rendering failed ({type(exc).__name__}): {str(exc)[:300]}"}))

@@ -22,6 +22,7 @@ let story,
   agentIndex = -1,
   slideElements = null,
   slide = 0;
+let loadRequest = 0;
 let draftId,
   sequence = Date.now(),
   saveTimer,
@@ -225,7 +226,7 @@ function update() {
       : "") +
     "\n\n" +
     story.sources.map((s) => s.name + " · " + (s.kind || "source") + "\n" + (s.attribution || "") + "\n" + s.content).join("\n\n");
-  if (current?.changes) $("sources").textContent += "\n\nChanges, omissions & assumptions\n" + [current.changes.summary, ...["material_changes", "omissions", "assumptions"].map(key => key.replaceAll("_", " ") + ":\n" + (current.changes[key].map(text => "• " + text).join("\n") || "None reported"))].join("\n\n");
+  if (current?.changes) $("sources").textContent += "\n\nChanges, omissions & assumptions\n" + [current.changes.summary, ...["material_changes", "omissions", "assumptions"].map(key => key.replaceAll("_", " ") + ":\n" + ((current.changes[key] || []).map(text => "• " + text).join("\n") || "None reported"))].join("\n\n");
   if (current?.calculations?.length) $("sources").textContent += "\n\nCalculations\n" + current.calculations.map(c => `${c.operation.replaceAll("_", " ")}: ${c.inputs.map(i => i.value + " [" + i.evidence_id + "]").join(", ")} → ${c.result} ${c.unit}\nRounded to ${c.decimal_places} decimal places. Arithmetic checked; interpretation reviewed by model.`).join("\n\n");
   const versions = $("versions");
   if (versions.options.length !== story.revisions.length) {
@@ -240,14 +241,39 @@ function update() {
   versions.value = revision;
 }
 async function loadRevision(id, initialSlide = 0) {
+  const request = ++loadRequest;
   if (!$("composer").hidden) await saveDraft();
   const p = await api("get-preview", { revision_id: id });
+  if (request !== loadRequest) return;
+  const nonce = requestId();
+  const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: blob:; media-src blob:; script-src 'nonce-${nonce}'; connect-src 'none'; form-action 'none'; base-uri 'none'">`;
+  const parsed = new DOMParser().parseFromString(p.html, "text/html");
+  const mediaPayload = [];
+  for (const asset of p.assets || []) {
+    const nodes = [...parsed.querySelectorAll("img,video,source,track")].filter(node =>
+      ["src", "poster"].some(attr => node.getAttribute(attr) === "asset:" + asset.id));
+    if (!nodes.length) continue;
+    const response = await fetch("/api/media", {method: "POST",
+      headers: {"Authorization": "Bearer " + token, "Content-Type": "application/json"},
+      body: JSON.stringify({revision_id: id, asset_id: asset.id})});
+    if (!response.ok) throw new Error("Media unavailable: " + asset.name);
+    mediaPayload.push({id: asset.id, mime_type: asset.mime_type, bytes: await response.arrayBuffer()});
+    for (const node of nodes) for (const attr of ["src", "poster"])
+      if (node.getAttribute(attr) === "asset:" + asset.id) {
+        node.setAttribute("data-stories-media-" + attr, asset.id);
+        node.removeAttribute(attr);
+      }
+  }
+  if (request !== loadRequest) return;
   documentKind = p.kind === "document";
   document.body.classList.toggle("document-review", documentKind);
   $("documentTools").hidden = !documentKind;
   commentIndex = -1;
-  $("exportFormat").hidden = !documentKind;
-  $("exportFormat").value = "html";
+  $("exportFormat").hidden = false;
+  for (const option of $("exportFormat").options) {
+    option.hidden = documentKind ? option.value === "zip" : ["pdf", "docx"].includes(option.value);
+  }
+  $("exportFormat").value = (p.assets || []).some(a => a.mime_type.startsWith("video/")) ? "zip" : "html";
   $("exportLimit").textContent = "";
   revision = id;
   slide = initialSlide;
@@ -257,9 +283,13 @@ async function loadRevision(id, initialSlide = 0) {
   active = null;
   draftId = null;
   selection = { kind: "story" };
-  const nonce = requestId();
-  const csp = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data:; script-src 'nonce-${nonce}'; connect-src 'none'; form-action 'none'; base-uri 'none'">`;
-  let html = p.html.replace(/<head[^>]*>/i, (m) => m + csp);
+  frame.addEventListener("load", () => {
+    if (request === loadRequest) send("media", {assets: mediaPayload});
+  }, {once: true});
+  $("mediaDetails").textContent = (p.assets || []).map(a =>
+    `${a.name} · ${(a.size_bytes / 1024 / 1024).toFixed(2)} MiB${a.width ? ` · ${a.width}×${a.height}` : ""}`
+  ).join("\n") + "\n" + (p.media_warnings || []).map(w => w.message).join("\n");
+  let html = parsed.documentElement.outerHTML.replace(/<head[^>]*>/i, (m) => m + csp);
   if (!/<head/i.test(html))
     html = html.replace(/<html[^>]*>/i, (m) => m + "<head>" + csp + "</head>");
   const code = (bridge + (documentKind ? documentBridge : ""))
@@ -438,7 +468,9 @@ $("exportFormat").onchange = () => {
       ? "Editable Word. Page breaks may differ; inspect in Word before delivery."
       : $("exportFormat").value === "pdf"
         ? "Letter PDF. Browser page breaks are approximate; inspect the exported PDF."
-        : "Exact retained HTML, without review annotations.";
+        : $("exportFormat").value === "zip"
+          ? "Extract the ZIP and open index.html. Keep its assets folder alongside it."
+          : "Single HTML with embedded images. Video requires ZIP. Images are not resized.";
 };
 $("export").onclick = async () => {
   const exportFormat = $("exportFormat").value;

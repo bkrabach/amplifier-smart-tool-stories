@@ -9,6 +9,12 @@ from .lib import Stories
 
 # Examples are valid JSON inputs; retained identities must come from earlier receipts.
 VALUES = {
+    "asset_id": "ASSET_ID",
+    "asset_ids": ["ASSET_ID"],
+    "name": "Demo poster",
+    "mime_type": "image/png",
+    "max_width": 1280,
+    "max_height": 720,
     "title": "Release brief",
     "html": '<html><body><section class="slide"><h1>Release brief</h1></section></body></html>',
     "request_id": "brief-1",
@@ -43,6 +49,26 @@ VALUES = {
 }
 
 GUIDANCE = {
+    "import_media": (
+        "Retain a supplied image, video or caption track without changing it.",
+        "status, asset metadata/identity and actionable size warnings.",
+        "Supply exactly one path or data_base64, plus name and MIME type. PNG/JPEG/WebP/GIF, MP4/WebM and UTF-8 WebVTT are supported. Video inspection requires ffprobe. Limits: 256 MiB per asset, 40 million decoded image pixels. No network or model use. Bind returned IDs through create-story/generate asset_ids and asset:ASSET_ID references. Large images are retained unchanged; ask the person before resize-media, or choose ZIP to keep separate assets.",
+    ),
+    "resize_media": (
+        "Make an explicitly requested resized copy of a retained still image.",
+        "New PNG asset with derived_from, transformation and size warnings; original remains available.",
+        "Call only for an explicitly selected resize. Fits max_width/max_height without upscaling, preserving aspect ratio and normalizing image orientation. Animated images are rejected. Does not alter any story revision; use revise-media to bind the new asset.",
+    ),
+    "get_media": (
+        "Retrieve media from an exact story revision.",
+        "asset metadata and data_base64.",
+        "Asset must belong to the selected revision. This is a read, not playback verification or authority to inspect another story.",
+    ),
+    "revise_media": (
+        "Create a new revision with explicitly selected media and optional HTML.",
+        "story_id, revision_id and size warnings.",
+        "Presentation only. asset_ids is the complete desired asset list; optional html replaces the base markup. References must use asset:ASSET_ID. Bind resized copies here after an explicit resize choice. Earlier revisions remain intact; review and human acceptance are not inherited. No model use.",
+    ),
     "answer_question": (
         "Continue initial generation after a question.",
         "Queued receipt with story_id, operation_id and question_operation_id.",
@@ -61,7 +87,7 @@ GUIDANCE = {
     "create_story": (
         "Import existing HTML for review.",
         "status, story_id and revision_id.",
-        "HTML is literal content, not a path. Import does not fact-check. External assets and scripts are suppressed in preview.",
+        "HTML is literal content, not a path. Import does not fact-check. Attach retained asset_ids for images/video. Unregistered resources and scripts are suppressed in preview.",
     ),
     "create_document": (
         "Import existing structured writing for review.",
@@ -90,7 +116,7 @@ GUIDANCE = {
     ),
     "get_preview": (
         "Discover valid targets before adding an anchored comment.",
-        "revision_id, static html, elements, kind and limitations.",
+        "revision_id, isolated html, elements, kind, attached assets, media_warnings and limitations.",
         "Use returned element IDs. Text anchors use Unicode start/end offsets and the exact quote; IDs belong to this revision.",
     ),
     "select_revision": (
@@ -141,12 +167,12 @@ GUIDANCE = {
     "export": (
         "Write the named artifact to an explicit destination.",
         "status, path, format metadata, hashes, checks and limitations.",
-        "format is html, pdf or docx. PDF/Word require structured documents; no PPTX or arbitrary HTML conversion. Parent directory must exist; never overwrites. Annotations are excluded. Word pagination may differ.",
+        "format is html, zip, pdf or docx. Script-free presentations include standalone buttons and keyboard slide navigation with viewport scaling. HTML embeds retained images unchanged; video/captions require ZIP with relative media paths. ZIP requires static HTML without scripts or external stylesheet/CSS resource dependencies. PDF/Word require structured documents; no PPTX or arbitrary HTML conversion. Parent directory must exist; never overwrites. Annotations are excluded. Word pagination may differ.",
     ),
     "get_export": (
         "Obtain artifact bytes without writing a file.",
         "data_base64, MIME type, revision/source/output hashes, checks and limits.",
-        "format is html, pdf or docx. PDF/Word require structured documents. Decode data_base64; annotations are excluded. Inspect format-specific limitations.",
+        "format is html, zip, pdf or docx. Script-free presentations include standalone buttons and keyboard slide navigation with viewport scaling. HTML embeds retained images unchanged; video/captions require ZIP with relative media paths. ZIP requires static HTML without scripts or external stylesheet/CSS resource dependencies. PDF/Word require structured documents. Decode data_base64; annotations are excluded. Inspect format-specific limitations.",
     ),
     "storytelling_capabilities": (
         "Learn supported writing approaches and source mapping.",
@@ -197,6 +223,15 @@ GUIDANCE = {
 
 
 FIELD_HELP = {
+    "asset_id": "Retained asset identity returned by import-media or resize-media",
+    "asset_ids": "Complete list of retained assets available to this presentation; reference them as asset:ASSET_ID",
+    "name": "Human-readable media name",
+    "mime_type": "Actual supported image/video MIME type, or text/vtt",
+    "path": "Explicit local media file to read; mutually exclusive with data_base64",
+    "data_base64": "Base64-encoded media bytes; mutually exclusive with path",
+    "attribution": "Supplied source/credit text retained with the asset",
+    "max_width": "Maximum derivative width in pixels (1–10000)",
+    "max_height": "Maximum derivative height in pixels (1–10000)",
     "title": "Short display title",
     "purpose": "Desired communication outcome",
     "audience": "Intended readers",
@@ -217,7 +252,7 @@ FIELD_HELP = {
     "sequence": "Nonnegative increasing draft version",
     "after": "Previous event cursor, or zero",
     "kind": "presentation or document",
-    "format": "html, pdf or docx",
+    "format": "html or zip for presentations; html, pdf or docx for structured documents",
     "output_path": "New destination file in an existing directory",
     "provider": "Provider alias; null uses current selection where accepted",
     "model": "Provider model ID; null uses its default",
@@ -232,6 +267,8 @@ def example(name):
         for key, parameter in parameters.items()
         if key != "self" and parameter.default is inspect.Parameter.empty
     }
+    if name == "import_media":
+        data["path"] = "/tmp/poster.png"
     if name == "add_comment":
         data["author"] = "agent"
     return data

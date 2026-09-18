@@ -24,6 +24,7 @@ class Store:
         self.db = self.path / "stories.sqlite3"
         with self.transaction() as db:
             db.executescript("""
+            CREATE TABLE IF NOT EXISTS media (id TEXT PRIMARY KEY, metadata TEXT NOT NULL, content BLOB NOT NULL);
             CREATE TABLE IF NOT EXISTS stories (id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS operations (id TEXT PRIMARY KEY, data TEXT NOT NULL);
             CREATE TABLE IF NOT EXISTS requests (id TEXT PRIMARY KEY, digest TEXT NOT NULL, result TEXT NOT NULL);

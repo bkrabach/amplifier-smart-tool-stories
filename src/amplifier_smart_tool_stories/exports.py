@@ -115,17 +115,110 @@ def word(revision):
     return output.getvalue()
 
 
-def artifact(revision, format):
+def artifact(revision, format, media_content=None):
     require(
-        isinstance(format, str) and format in {"html", "pdf", "docx"},
-        "Choose html, pdf or docx.",
+        isinstance(format, str) and format in {"html", "zip", "pdf", "docx"},
+        "Choose html, zip, pdf or docx.",
         "unsupported_format",
     )
     limitations = []
     checks = {"structure": "passed", "visual": "not_performed"}
-    if format == "html":
-        data, mime = revision["html"].encode(), "text/html"
-        checks = revision["review"]
+    if format in {"html", "zip"}:
+        from .artifacts import parse_html
+        from .media import EXTENSIONS, bindings
+
+        assets = revision.get("assets", [])
+        if format == "zip" or assets:
+            from .media import portable_markup
+
+            portable_markup(revision["html"])
+        content = media_content or {}
+        used, missing = bindings(revision["html"], assets, strict=format == "zip" or bool(assets))
+        selected = [a for a in assets if a["id"] in used]
+        for asset in selected:
+            raw = content.get(asset["id"])
+            require(
+                raw is not None and hashlib.sha256(raw).hexdigest() == asset["sha256"],
+                "Required media is missing or changed.",
+                "missing_asset",
+            )
+        require(
+            format != "html" or not any(not a["mime_type"].startswith("image/") for a in selected),
+            "This revision includes video or captions. Choose ZIP to deliver HTML with its media assets.",
+            "package_required",
+        )
+        markup = revision["html"]
+        paths = {a["id"]: "assets/" + a["id"] + "." + EXTENSIONS[a["mime_type"]] for a in selected}
+        if selected:
+            soup = parse_html(markup)
+            for node in soup.select("img,video,source,track"):
+                for attr in ("src", "poster"):
+                    ref = node.get(attr, "")
+                    if ref.startswith("asset:") and ref[6:] in paths:
+                        asset = next(a for a in selected if a["id"] == ref[6:])
+                        node[attr] = (
+                            paths[asset["id"]]
+                            if format == "zip"
+                            else (
+                                "data:"
+                                + asset["mime_type"]
+                                + ";base64,"
+                                + base64.b64encode(content[asset["id"]]).decode()
+                            )
+                        )
+            markup = str(soup)
+        # Review navigation belongs to the dashboard; portable decks need their own player.
+        # Imported scripted decks retain their existing presentation behavior.
+        soup = parse_html(markup)
+        if revision.get("kind") != "document" and soup.select(".slide") and not soup.find("script"):
+            from importlib.resources import files
+
+            player = soup.new_tag("script")
+            player["data-stories-presentation"] = "1"
+            player.string = (
+                files("amplifier_smart_tool_stories").joinpath("resources/presentation.js").read_text()
+            )
+            (soup.body or soup).append(player)
+            markup = str(soup)
+        data, mime = markup.encode(), "text/html"
+        checks = {**revision["review"], "media_playback": "not_performed"}
+        if missing:
+            limitations.append(
+                "Imported HTML has unretained media references; external files are not packaged."
+            )
+        if format == "zip":
+            import json
+            import zipfile
+
+            output = io.BytesIO()
+            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_STORED) as archive:
+
+                def write_member(name, value):
+                    archive.writestr(zipfile.ZipInfo(name), value)
+
+                write_member("index.html", data)
+                for asset in selected:
+                    write_member(paths[asset["id"]], content[asset["id"]])
+                write_member(
+                    "manifest.json",
+                    json.dumps(
+                        {
+                            "revision_id": revision["id"],
+                            "delivery_sha256": revision.get("delivery_sha256", revision["sha256"]),
+                            "assets": selected,
+                        },
+                        indent=2,
+                    ),
+                )
+                write_member(
+                    "README.txt",
+                    "Extract this ZIP, then open index.html in a browser. Keep the assets folder beside it. No Stories service is needed.\nVideo codec support depends on the browser.\n",
+                )
+            data, mime = output.getvalue(), "application/zip"
+        if selected:
+            limitations.append(
+                "Static layout review does not certify video playback or audio. Browser codec support varies."
+            )
     else:
         require(
             revision.get("document") is not None,
@@ -167,6 +260,9 @@ def artifact(revision, format):
         "sha256": hashlib.sha256(data).hexdigest(),
         "source_sha256": revision["sha256"],
         "data_base64": base64.b64encode(data).decode(),
+        "size_bytes": len(data),
+        "delivery_sha256": revision.get("delivery_sha256", revision["sha256"]),
+        "media_warnings": revision.get("media_warnings", []),
         "checks": checks,
         "limitations": limitations,
     }

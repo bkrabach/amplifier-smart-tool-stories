@@ -47,7 +47,7 @@
     </header>
     <div id="hint">Select text or click an element to comment</div>
     <div id="previewNotice">
-      Static preview · source scripts and external resources disabled
+      Isolated preview · supplied media enabled
     </div>
     <footer>
       <button id="previous" aria-label="Previous slide">←</button
@@ -85,11 +85,13 @@
       ><select id="versions"></select
       ><label for="exportFormat">Export format</label
       ><select id="exportFormat">
-        <option value="html">HTML</option>
+        <option value="html">HTML · embedded images</option>
+        <option value="zip">ZIP · HTML and media</option>
         <option value="pdf">PDF · Letter pages</option>
         <option value="docx">Word · editable</option>
       </select>
       <p id="exportLimit"></p>
+      <p id="mediaDetails" style="white-space:pre-line"></p>
       <button id="export">Export this version</button>
       <button id="acceptRevision">Accept this revision</button>
       <p id="acceptanceStatus" role="status"></p>

@@ -11,10 +11,11 @@ from pathlib import Path
 
 from .artifacts import digest, evidence_checked, parse_html, preview, validate_anchor
 from .errors import StoriesError, require
+from .media import MediaLibrary, bindings, select, warnings_for
 from .store import Store, identity, now
 
 
-class Stories:
+class Stories(MediaLibrary):
     def __init__(
         self,
         storage=None,
@@ -140,13 +141,24 @@ class Stories:
         raise StoriesError("not_found", "Revision does not belong to this story.")
 
     def _new_revision(
-        self, story, html, base=None, evidence=None, limitations=None, origin="imported", document=None
+        self,
+        story,
+        html,
+        base=None,
+        evidence=None,
+        limitations=None,
+        origin="imported",
+        document=None,
+        assets=None,
     ):
         if document is not None:
             from .documents import checked, render_document
 
             document = checked(document, evidence or [])
             require(html == render_document(document, evidence or []), "Document and HTML disagree.")
+        if assets is None:
+            assets = self._revision(story, base).get("assets", []) if base else story.get("assets", [])
+        bindings(html, assets, strict=bool(assets) or origin == "model")
         parse_html(html)
         evidence = evidence_checked(evidence or [], story["sources"])
         revision = {
@@ -155,6 +167,9 @@ class Stories:
             "created_at": now(),
             "html": html,
             "sha256": digest(html),
+            "assets": copy.deepcopy(assets),
+            "delivery_sha256": digest(json.dumps([html, assets], sort_keys=True)),
+            "media_warnings": warnings_for(assets),
             "format": "html",
             "kind": "document" if document is not None else "presentation",
             **({"document": document} if document is not None else {}),
@@ -166,6 +181,11 @@ class Stories:
                 "evidence_references": "passed: exact source quotes" if evidence else "not_performed",
                 "semantic": "not_performed",
                 "visual": "not_performed",
+                **(
+                    {"media_playback": "not_performed: static review inspects posters, not playback or audio"}
+                    if any(a["mime_type"].startswith("video/") for a in assets)
+                    else {}
+                ),
             },
         }
         story["revisions"].append(revision)
@@ -183,8 +203,9 @@ class Stories:
         purpose="Review supplied material",
         audience="Reader",
         document=None,
+        asset_ids=None,
     ):
-        """Import supplied HTML; retain exact bytes for export, with an isolated static preview."""
+        """Import HTML and optional retained assets for isolated review; original markup is retained."""
         require(isinstance(title, str) and title.strip() and len(title) <= 300, "Supply a short title.")
         require(isinstance(purpose, str) and isinstance(audience, str), "Purpose and audience must be text.")
         supplied = self._sources(sources or [])
@@ -195,6 +216,8 @@ class Stories:
         parse_html(html)
 
         def action(db):
+            assets = select(db, asset_ids or [])
+            require(not assets or document is None, "Media composition currently supports presentations.")
             story = {
                 "id": identity("story"),
                 "title": title,
@@ -202,6 +225,7 @@ class Stories:
                 "audience": audience,
                 "created_at": now(),
                 "sources": supplied,
+                "assets": assets,
                 "revisions": [],
                 "annotations": [],
                 "drafts": {},
@@ -220,7 +244,8 @@ class Stories:
         return self._mutation(
             request_id,
             "create_story",
-            [title, document if document is not None else html, supplied, purpose, audience],
+            [title, document if document is not None else html, supplied, purpose, audience]
+            + ([asset_ids] if asset_ids else []),
             action,
         )
 
@@ -254,16 +279,18 @@ class Stories:
             return self._revision(self.store.get(db, "stories", story_id), revision_id)
 
     def get_preview(self, story_id, revision_id):
-        """Return static preview HTML and selectable elements; scripts/resources are suppressed."""
+        """Return isolated HTML, retained media references and selectable elements; arbitrary resources are suppressed."""
         rev = self.get_revision(story_id, revision_id)
-        html, anchors = preview(rev["html"])
+        html, anchors = preview(rev["html"], rev.get("assets", []))
         return {
             "revision_id": revision_id,
             "html": html,
             "elements": anchors,
+            "assets": rev.get("assets", []),
+            "media_warnings": rev.get("media_warnings", []),
             "kind": rev.get("kind", "presentation"),
             "limitations": [
-                "Static preview: source scripts, forms and external resources are disabled.",
+                "Source scripts, forms and unregistered resources are disabled. Video playback is not a static-review pass.",
                 "Text offsets count Unicode characters within an identified element.",
             ],
         }
@@ -327,7 +354,7 @@ class Stories:
         def action(db):
             story = self.store.get(db, "stories", story_id)
             rev = self._revision(story, revision_id)
-            checked = validate_anchor(rev["html"], target)
+            checked = validate_anchor(rev["html"], target, rev.get("assets", []))
             note = {
                 "id": identity("note"),
                 "revision_id": revision_id,
@@ -424,6 +451,7 @@ class Stories:
             acceptance = {
                 "revision_id": revision_id,
                 "artifact_sha256": revision["sha256"],
+                "delivery_sha256": revision.get("delivery_sha256", revision["sha256"]),
                 "accepted_at": now(),
                 "request_id": request_id,
             }
@@ -442,7 +470,7 @@ class Stories:
         with self.store.transaction() as db:
             story = self.store.get(db, "stories", story_id)
             rev = self._revision(story, revision_id)
-            checked = validate_anchor(rev["html"], anchor or {"kind": "story"})
+            checked = validate_anchor(rev["html"], anchor or {"kind": "story"}, rev.get("assets", []))
             old = story["drafts"].get(draft_id)
             if old and old["sequence"] >= sequence:
                 return {"status": "stale", "draft": old}
@@ -456,7 +484,9 @@ class Stories:
             self.store.put(db, "stories", story)
             return {"status": "saved", "sequence": sequence}
 
-    def generate(self, title, purpose, audience, sources, grant, request_id, kind="presentation"):
+    def generate(
+        self, title, purpose, audience, sources, grant, request_id, kind="presentation", asset_ids=None
+    ):
         """Generate a presentation or structured document; one repair, up to five presentation or eleven document model calls."""
         require(
             isinstance(kind, str) and kind in {"presentation", "document"},
@@ -471,6 +501,10 @@ class Stories:
         checked = self._grant(grant)
 
         def action(db):
+            assets = select(db, asset_ids or [])
+            require(
+                not assets or kind == "presentation", "Media composition currently supports presentations."
+            )
             story = {
                 "id": identity("story"),
                 "title": title,
@@ -479,6 +513,7 @@ class Stories:
                 "audience": audience,
                 "created_at": now(),
                 "sources": supplied,
+                "assets": assets,
                 "revisions": [],
                 "annotations": [],
                 "drafts": {},
@@ -494,7 +529,8 @@ class Stories:
             request_id,
             "generate",
             [title, purpose, audience, supplied, grant, self.config.public()]
-            + ([kind] if kind != "presentation" else []),
+            + ([kind] if kind != "presentation" else [])
+            + ([asset_ids] if asset_ids else []),
             action,
         )
 
@@ -558,7 +594,15 @@ class Stories:
                 result = self.intelligence(story, op)
             else:
                 from .intelligence import execute
+                from .media import image_payload
 
+                selected_assets = (
+                    self._revision(story, op["revision_id"]).get("assets", [])
+                    if op["revision_id"]
+                    else story.get("assets", [])
+                )
+                with self.store.transaction() as db:
+                    story["_media_images"] = image_payload(db, selected_assets)
                 result = execute(story, op, lambda: self.get_operation(operation_id)["state"] == "cancelled")
             with self.store.transaction() as db:
                 current = self.store.get(db, "operations", operation_id)
@@ -711,10 +755,15 @@ class Stories:
         }
 
     def get_export(self, story_id, revision_id, format="html"):
-        """Get identified HTML or a distinct document PDF/Word export as base64, with format-specific limits."""
+        """Get HTML with embedded images, a portable ZIP, or document PDF/Word as base64 with delivery identity."""
         from .exports import artifact
 
-        return artifact(self.get_revision(story_id, revision_id), format)
+        revision = self.get_revision(story_id, revision_id)
+        with self.store.transaction() as db:
+            from .media import load
+
+            content = {a["id"]: load(db, a["id"])[1] for a in revision.get("assets", [])}
+        return artifact(revision, format, content)
 
     def export(self, story_id, revision_id, output_path, format="html"):
         """Write the chosen revision in an explicit format, excluding annotations; never overwrite."""
@@ -827,6 +876,10 @@ class Stories:
 
 CAPABILITIES = [
     "manifest",
+    "import_media",
+    "resize_media",
+    "get_media",
+    "revise_media",
     "create_story",
     "create_document",
     "generate",

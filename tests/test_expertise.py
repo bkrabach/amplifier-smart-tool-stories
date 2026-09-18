@@ -110,7 +110,7 @@ def test_invalid_document_gets_one_structural_repair_then_real_review(monkeypatc
             answer.setdefault("calculations", [])
         return json.dumps(answer), {}
 
-    async def render(html, timeout):
+    async def render(html, timeout, media=None):
         return {
             "images": [{"sha256": "a" * 64, "data": "image"}],
             "findings": [],

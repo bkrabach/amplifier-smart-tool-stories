@@ -26,10 +26,11 @@ viewer = api.start_dashboard(story, revision)
 print(viewer['url'])  # Private bearer URL; open it only for the intended reviewer.
 ```
 
-Import preserves exact HTML bytes for export. The viewer disables source scripts,
-forms and external resources and supplies navigation for `.slide` sections. It
-labels that static-preview limitation. Model-generated HTML is self-contained static
-HTML/CSS. HTML that depends on JavaScript or remote assets may preview differently.
+Import retains original HTML. Media exports resolve retained asset references;
+HTML without retained media exports unchanged. The viewer disables source scripts,
+forms and unregistered resources while allowing attached images and video. It
+supplies navigation for `.slide` sections. HTML that depends on JavaScript or remote
+assets may preview differently. Static model review sees video posters, not playback.
 
 The approved interaction is material-first: the document occupies the viewport,
 agent highlights reveal context, selecting text or an element offers a comment, and
@@ -122,7 +123,7 @@ provider may still be billed. There is no automatic publication or caller wake-u
 - HTML presentations and structured documents. Document PDF and editable Word exports
   are separate outputs with explicit layout limits. PowerPoint and spreadsheet work remain deferred.
 - Review sources are supplied text; no repository/session/network research connectors.
-- Static previews suppress active content and external assets. Native text anchors
+- Isolated previews suppress source active content and unregistered assets. Native text anchors
   are Unicode character offsets, scoped to an exact revision. No automatic anchor
   reassociation between revisions.
 - Semantic and static rendered-quality review are model judgments with recorded
@@ -274,3 +275,44 @@ not establish the semantic appropriateness of inputs or completeness of disclosu
 Acceptance belongs to shared story state, is tied to an exact revision/hash, and
 never alters the artifact or its review findings. Calling agents record acceptance
 only when explicitly conveyed by the person. Later revisions remain unaccepted.
+
+
+## Images, video and packaged presentations
+
+```python
+poster = api.import_media("Demo poster", "image/png", "poster-1", path="/supplied/poster.png")
+clip = api.import_media("Demo clip", "video/mp4", "clip-1", path="/supplied/demo.mp4")
+image_id, video_id = poster["asset"]["id"], clip["asset"]["id"]
+html = f'''<html><body><section class="slide"><h1>Demo</h1>
+<video controls src="asset:{video_id}" poster="asset:{image_id}" width="640"></video>
+<p>Supplied demonstration.</p></section></body></html>'''
+created = api.create_story("Demo", html, "demo-1", asset_ids=[image_id, video_id])
+api.export(created["story_id"], created["revision_id"], "/chosen/demo.zip", format="zip")
+```
+
+The CLI accepts the same fields as JSON; read each command's help. `generate` accepts
+asset_ids too. Media composition currently applies to presentations, not structured
+documents. Video inspection requires ffprobe. Playback happens inside the isolated
+review frame, without exposing workspace credentials. Native playback controls remain
+usable with review enabled; changing slides pauses clips on other slides.
+
+Large images produce warnings, not silent transformations. Keep the original,
+choose ZIP to avoid embedding, or explicitly request `resize_media(asset_id,
+max_width, max_height, request_id)` and use its new identity in `revise_media` with
+updated HTML. The original remains retained. Exported ZIP assets are byte-for-byte
+originals unless the revision explicitly references a derivative. Single HTML embeds
+images; video/captions require ZIP. The package uses relative paths and includes
+extraction instructions. Browser file:// playback verification remains outstanding;
+review-workspace playback and package contents have separate checks.
+
+Use `get_media(story_id, revision_id, asset_id)` to retrieve exact bytes as base64.
+Asset replacement creates a new delivery hash and revision; old acceptance and checks
+are not inherited. Static rendering can inspect images and posters but not video
+content, audio or caption synchronization. No model provider is needed for imports,
+resizing, retained playback or packaging. See the packaged operating skill for supported
+formats, budgets, portable-markup restrictions and limits.
+
+Presentation HTML and ZIP exports include standalone slide navigation when the
+revision has no scripts: previous/next buttons, arrow and Page Up/Down keys,
+Home/End, and viewport scaling. Imported scripted decks retain their own controls.
+Structured document exports remain scrolling documents. No Stories service is needed.

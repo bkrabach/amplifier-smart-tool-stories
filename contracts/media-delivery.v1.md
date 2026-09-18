@@ -69,7 +69,9 @@ behaviors; supported providers, operations and exports require implementation ev
 5. **Delivery choices are explicit and portable.** Single-file HTML embeds supported
    images and reports expected size. HTML with separate assets uses relative paths;
    a ZIP export includes the entry HTML, required assets and extraction/opening
-   instructions. Video remains a separate asset by default. A package advertised as
+   instructions. Presentation delivery preserves slide-by-slide navigation outside
+   the review workspace; document delivery remains a scrolling document.
+   Video remains a separate asset by default. A package advertised as
    offline works after extraction without Stories, its original paths or a local
    server, on the documented supported browsers. External dependencies require an
    explicit choice and disclosure; they cannot masquerade as included assets.

@@ -73,7 +73,7 @@ The [caller guide](docs/USAGE.md) covers the library, CLI and provider setup.
    authorized model work available, Stories can answer, revise or ask a question.
    Your agent can retrieve the same feedback and resulting versions later.
 4. **Accept and export.** Accept a specific revision when you are satisfied. Export
-   presentations as HTML, or documents as HTML, PDF or editable Word. Acceptance
+   presentations as HTML or a ZIP with media assets, or documents as HTML, PDF or editable Word. Acceptance
    stays separate from model checks and does not publish anything.
 
 Documents offer continuous reading, optional pages and zoom through a small
@@ -94,6 +94,9 @@ Stories is an early implementation. Generation time and quality depend on the
 material and model. It checks source quotations and supported arithmetic, and uses
 model review for factual interpretation and rendered quality. Those checks can miss
 problems; review the result before relying on it.
+
+Presentations can include supplied images and video. Keep images unchanged, explicitly
+resize a copy, or export HTML with separate media in a ZIP; video uses ZIP delivery.
 
 Documents currently support headings, paragraphs, lists, quotations and tables.
 Imported HTML may preview differently when it depends on scripts or external assets.

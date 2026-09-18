@@ -142,7 +142,7 @@ def test_runtime_repairs_once_and_reviews_new_artifact(monkeypatch):
             answer.setdefault("calculations", [])
         return json.dumps(answer), {"provider": "test"}
 
-    async def render_stub(html, timeout):
+    async def render_stub(html, timeout, media=None):
         rendered.append(html)
         return {"images": [{"sha256": "a" * 64, "data": "png"}], "findings": [], "rendered_text": "Result"}
 

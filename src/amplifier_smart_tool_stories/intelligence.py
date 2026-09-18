@@ -135,6 +135,7 @@ def execute(story, operation, cancelled):
                 "source_names": {s["id"]: s["name"] for s in story["sources"]},
                 "limitations": extracted.get("limitations", []),
                 "base": base,
+                "assets": base.get("assets", []) if base else story.get("assets", []),
                 "comment": note,
                 "continuation": operation.get("continuation", []),
                 "related_comments": [
@@ -200,7 +201,11 @@ def execute(story, operation, cancelled):
 
                         result["evidence"] = evidence
                         validate_disclosures(result, story, operation)
-                        rendered = await render(result.get("html"), operation["deadline"] - time.time())
+                        rendered = await render(
+                            result.get("html"),
+                            operation["deadline"] - time.time(),
+                            media=story.get("_media_images"),
+                        )
                         images = rendered["images"]
                         batches = (
                             [images[i : i + 3] for i in range(0, len(images), 3)] if is_document else [images]

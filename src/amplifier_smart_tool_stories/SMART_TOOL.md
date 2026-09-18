@@ -16,6 +16,10 @@ requires:
     purpose: Needed for generation and intelligent comment responses; retained review works without it.
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
+  - name: ffprobe
+    purpose: Required only when importing MP4 or WebM video; provided by ffmpeg.
+    optional: true
+    install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
   - name: pango
     purpose: Native text layout for static rendered review of generated and revised artifacts.
     optional: true
@@ -25,7 +29,7 @@ requires:
 
 Create evidence-based HTML stories and review them with a person. The Python
 library is the product; the `stories` CLI and optional local dashboard share its
-state. It supports HTML presentations, structured documents and anchored review.
+state. It supports HTML presentations with retained images/video, structured documents and anchored review.
 Documents export as HTML, Letter PDF or editable Word; PowerPoint and spreadsheets
 remain deferred.
 
@@ -97,10 +101,11 @@ viewer = api.start_dashboard(story_id, revision_id)
 
 Open the returned private loopback URL only when authorized. No browser is opened
 implicitly. It is a bearer capability for this story; do not share it. The opaque
-iframe suppresses source scripts, forms and external resources. It displays static
-HTML/CSS with review-owned navigation for `.slide` sections. It is an approximate
-static preview when the original relies on scripts; exact original HTML is retained
-for export. Browser annotations and drafts never modify exported bytes.
+iframe suppresses source scripts, forms and unregistered resources. It displays
+HTML/CSS and explicitly attached media, with review-owned navigation for `.slide`
+sections. Original markup is retained; media exports resolve its asset references.
+Browser annotations and drafts never enter exports. Static rendered review uses
+video posters and does not certify playback or audio.
 
 Use `get-preview` to discover anchors. Text anchors contain kind=text, element,
 start/end (Unicode character offsets within that element), and exact quote. Element
@@ -164,7 +169,7 @@ All exist as methods on Stories (hyphens become underscores):
   reported interrupted/uncertain; cancel it before explicitly creating replacement work.
 - `run-operation`: claim and execute one queued operation exactly once.
 - `cancel-operation`: prevent late commits and cooperatively stop active model work.
-- `export`: write a named revision to a new output_path; format html (default), pdf or docx.
+- `export`: write a named revision to a new output_path; format html (default), zip, pdf or docx.
 - `get-export`: base64 bytes, MIME type, revision and source/output hashes, checks and limits.
   PDF/Word support structured documents only; no arbitrary HTML conversion.
 - `storytelling-capabilities`: provider-free writing approaches and upstream mapping.
@@ -196,7 +201,7 @@ State and events are retained without automatic expiration in the chosen local s
 No automatic publication, notification, caller wake-up, repository access, commits or pushes.
 Only supplied content is available to intelligence. HTML with external assets or source
 scripts may preview differently; exported originals may contain their original active
-content. Independent semantic/visual grading, production brand systems, images/equations,
+content. Independent semantic/visual grading, production brand systems, document images/equations,
 general conversion remain outside this slice.
 
 
@@ -290,3 +295,48 @@ person's explicitly conveyed acceptance of that exact version. The dashboard off
 Accept this revision in Story details. Acceptance records timestamp and artifact hash,
 and appears in shared story state/events. It does not change model checks, select a
 version, accept later revisions, modify exports, authorize work or grant publication.
+
+
+## Supplied presentation media and portable delivery
+
+Read `stories import-media --help`, `resize-media --help`, `revise-media --help`
+and `get-media --help`. Import explicit local `path` or `data_base64` with name,
+MIME type and optional attribution. The returned asset ID is retained with exact
+bytes. PNG/JPEG/WebP/GIF, MP4/WebM and UTF-8 WebVTT are supported; video inspection
+requires ffprobe from ffmpeg. Imports do not fetch URLs or call a model.
+
+Pass `asset_ids` to `create-story` or `generate` (presentations only). Reference them
+as `<img src="asset:ASSET_ID" alt="Description">` or
+`<video controls src="asset:VIDEO_ID" poster="asset:IMAGE_ID"></video>` with a
+visible caption. A WebVTT track uses `<track kind="captions" src="asset:TRACK_ID"
+srclang="en" label="English">` inside the video; use the actual language.
+Metadata/descriptions do not establish that Stories inspected a clip's contents.
+Generation/review sends rendered images and posters to the configured model, not
+video/audio streams. Every revision retains its asset bindings and delivery hash.
+
+Large image warnings appear above 2 MiB or 2560×1440 dimensions (twice the review
+canvas). Explain keep-original, explicitly resized-copy and ZIP choices. Never call
+resize-media without a selected resize. It creates a PNG derivative of a still image,
+retains attribution/provenance and leaves the original intact. `revise-media` accepts
+the complete desired asset_ids and optional replacement HTML; it creates an
+unreviewed, unaccepted revision rather than modifying the base.
+
+HTML export embeds referenced images unchanged. Video or captions require ZIP;
+ZIP contains index.html, assets/, manifest.json and extraction instructions. Extract
+and open index.html with assets/ alongside it. Static media packages reject source
+scripts, frames, external stylesheets and CSS resource URLs rather than claiming to
+bundle them. Images and video loaded in the local workspace have been browser-tested;
+file:// playback from an extracted package is not yet verified. Codec compatibility
+is browser-dependent. Original HTML without retained media still exports unchanged,
+with unretained media references disclosed; ZIP refuses missing media.
+
+Operational budgets: 32 MiB markup parsing, 256 MiB per media asset, 40 million
+pixels per image, 100 attached assets, 64 MiB encoded images per static rendering.
+These are separate budgets; the old 2 MB total-HTML restriction is removed. Video
+bytes stay outside model context and static rendering. Animated image review sees
+only a static frame. Presentation-to-video export is not implemented yet.
+
+Presentation HTML and ZIP exports include standalone slide navigation when the
+revision has no scripts: previous/next buttons, arrow and Page Up/Down keys,
+Home/End, and viewport scaling. Imported scripted decks retain their own controls.
+Structured document exports remain scrolling documents. No Stories service is needed.

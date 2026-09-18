@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 from .errors import require
 
-MAX_HTML = 2_000_000
+MAX_HTML = 32 * 1024 * 1024
 
 
 def digest(text):
@@ -14,24 +14,49 @@ def digest(text):
 
 
 def parse_html(html):
-    require(isinstance(html, str) and 0 < len(html.encode()) <= MAX_HTML, "Supply nonempty HTML under 2 MB.")
+    require(
+        isinstance(html, str) and 0 < len(html.encode()) <= MAX_HTML,
+        "Supply nonempty markup under the 32 MiB parsing budget; import media separately.",
+    )
     soup = BeautifulSoup(html, "html.parser")
     require(soup.html is not None and soup.body is not None, "HTML must contain html and body elements.")
     require(bool(soup.body.get_text(strip=True)), "HTML has no visible text content.")
     return soup
 
 
-def preview(html):
+def preview(html, assets=None):
     soup = parse_html(html)
     # Source scripts never run in the review origin. Original bytes remain available for export.
     for node in soup.select("script,iframe,object,embed,base,link,meta,form,input,textarea,button,svg,math"):
         node.decompose()
-    for node in soup.find_all(True):
+    allowed = {"asset:" + a["id"] for a in (assets or [])}
+    for node in list(soup.find_all(True)):
+        source = {key: node.get(key) for key in ("src", "poster")}
         for key in list(node.attrs):
-            if key.startswith("on") or key in {"srcdoc", "formaction", "action", "href", "src", "srcset"}:
+            if key.startswith("on") or key in {
+                "srcdoc",
+                "formaction",
+                "action",
+                "href",
+                "src",
+                "srcset",
+                "poster",
+                "background",
+            }:
                 del node.attrs[key]
-        # Prevent a supplied stylesheet from masquerading as overlay controls outside its iframe.
         node.attrs.pop("contenteditable", None)
+        if node.name in {"img", "video", "source", "track"}:
+            for key, value in source.items():
+                if value in allowed:
+                    node[key] = value
+            if source["src"] and not node.get("src"):
+                warning = soup.new_tag("span")
+                warning.string = "[Media unavailable: import and attach this asset.]"
+                node.insert_after(warning)
+        if node.name == "video":
+            node["controls"] = ""
+            node["preload"] = "metadata"
+            node.attrs.pop("autoplay", None)
     anchors = []
     blocks = soup.body.select("h1,h2,h3,h4,p,li,td,th,blockquote,figcaption,article,section,div,span,table")
     structured = soup.select_one("article.stories-document")
@@ -48,7 +73,7 @@ def preview(html):
     return str(soup), anchors
 
 
-def validate_anchor(html, anchor):
+def validate_anchor(html, anchor, assets=None):
     require(isinstance(anchor, dict), "Anchor must be an object.")
     require(set(anchor) <= {"kind", "element", "start", "end", "quote"}, "Unknown anchor fields.")
     kind = anchor.get("kind")
@@ -56,7 +81,7 @@ def validate_anchor(html, anchor):
     if kind == "story":
         require(set(anchor) == {"kind"}, "Whole-story anchors contain only kind.")
         return {"kind": "story"}
-    _, elements = preview(html)
+    _, elements = preview(html, assets)
     targets = {e["element"]: e for e in elements}
     require(anchor.get("element") in targets, "Anchor element does not exist in this revision.")
     text = targets[anchor["element"]]["text"]

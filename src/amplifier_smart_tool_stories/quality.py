@@ -11,7 +11,7 @@ from .artifacts import digest, parse_html
 from .errors import StoriesError, require
 
 
-async def render(html, timeout, include_pdf=False):
+async def render(html, timeout, include_pdf=False, media=None):
     parse_html(html)
     env = os.environ.copy()
     # Standard macOS native library locations; never a development checkout.
@@ -30,7 +30,9 @@ async def render(html, timeout, include_pdf=False):
     )
     try:
         stdout, _ = await asyncio.wait_for(
-            process.communicate(json.dumps({"html": html, "include_pdf": include_pdf}).encode()),
+            process.communicate(
+                json.dumps({"html": html, "include_pdf": include_pdf, "media": media or {}}).encode()
+            ),
             min(40, timeout),
         )
         result = json.loads(stdout)
@@ -57,6 +59,7 @@ def record(html, rendered, verdict, provenance):
         "pages": [i["sha256"] for i in rendered["images"]],
         "limits": [
             "Static rendering approximates browser layout.",
+            "Video is represented by its poster; playback, audio and caption synchronization are not inspected.",
             "Model review is not human approval or independent factual verification.",
         ],
     }

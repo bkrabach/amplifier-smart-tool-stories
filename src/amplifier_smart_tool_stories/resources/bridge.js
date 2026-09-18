@@ -56,6 +56,7 @@
   function show(i) {
     if (slides.length) {
       slide = Math.max(0, Math.min(i, slides.length - 1));
+      document.querySelectorAll("video").forEach(v => { if (v.closest(".slide") !== slides[slide]) v.pause(); });
       slides.forEach((s, j) =>
         s.classList.toggle("stories-current", j === slide),
       );
@@ -152,6 +153,7 @@
   });
 
   document.addEventListener("click", (e) => {
+    if (e.target.closest("video")) return;
     if (!overlay || cancelled || dragging || getSelection()?.toString()) return;
     const hit = noteRanges.find((n) =>
       [...n.range.getClientRects()].some(
@@ -184,6 +186,17 @@
   window.addEventListener("message", (e) => {
     if (e.source !== parent || e.data?.channel !== channel) return;
     const m = e.data;
+    if (m.type === "media") {
+      for (const asset of m.assets || []) {
+        const url = URL.createObjectURL(new Blob([asset.bytes], {type: asset.mime_type}));
+        for (const node of document.querySelectorAll("[data-stories-media-src],[data-stories-media-poster]")) {
+          for (const attr of ["src", "poster"]) {
+            if (node.getAttribute("data-stories-media-" + attr) === asset.id) node.setAttribute(attr, url);
+          }
+        }
+      }
+      document.querySelectorAll("video").forEach(v => v.load());
+    }
     if (m.type === "dismiss-selection") dismissSelection();
     if (m.type === "navigate") show(slide + m.delta);
     if (m.type === "position") show(m.slide);

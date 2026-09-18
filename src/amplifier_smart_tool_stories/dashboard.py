@@ -49,11 +49,13 @@ class Dashboard:
                 self.send_header("Referrer-Policy", "no-referrer")
                 self.send_header(
                     "Content-Security-Policy",
-                    "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self' about:; img-src data:; frame-ancestors 'none'",
+                    "default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self'; frame-src 'self' about:; img-src data: blob:; media-src blob:; frame-ancestors 'none'",
                 )
                 if attachment:
                     extension = (
-                        "pdf"
+                        "zip"
+                        if mime == "application/zip"
+                        else "pdf"
                         if mime == "application/pdf"
                         else "docx"
                         if "wordprocessingml" in mime
@@ -128,6 +130,12 @@ class Dashboard:
                             owner.api.cancel_operation(operation_id)
                         self.send(200, {"status": "stopped"})
                         threading.Thread(target=owner.server.shutdown, daemon=True).start()
+                        return
+                    elif path == "/api/media":
+                        import base64
+
+                        result = owner.api.get_media(owner.story_id, data["revision_id"], data["asset_id"])
+                        self.send(200, base64.b64decode(result["data_base64"]), result["asset"]["mime_type"])
                         return
                     elif path == "/api/download":
                         import base64

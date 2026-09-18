@@ -62,9 +62,11 @@ dependencies = [
     { name = "beautifulsoup4" },
     { name = "google-genai" },
     { name = "openai" },
+    { name = "pillow" },
     { name = "pypdfium2" },
     { name = "python-docx" },
     { name = "pyyaml" },
+    { name = "tinycss2" },
     { name = "weasyprint" },
 ]
 
@@ -81,11 +83,13 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "google-genai", specifier = ">=1" },
     { name = "openai", specifier = ">=1" },
+    { name = "pillow", specifier = ">=11" },
     { name = "pypdfium2", specifier = ">=5.13.0" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "python-docx", specifier = ">=1.2" },
     { name = "pyyaml", specifier = ">=6" },
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.12" },
+    { name = "tinycss2", specifier = ">=1.4" },
     { name = "weasyprint", specifier = ">=70.0" },
 ]
 provides-extras = ["dev"]
