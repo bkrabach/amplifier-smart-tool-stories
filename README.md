@@ -2,6 +2,8 @@
 
 **Turn source material into stories people can use.**
 
+![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.png)
+
 Stories helps you and your agent turn notes, evidence and existing writing into
 presentations and documents. Describe who you are writing for and what they need
 to understand. Stories plans, writes and reviews a draft, keeping its claims tied
@@ -84,6 +86,9 @@ wake the calling agent automatically. Closing its browser tab does not stop the
 service; ask your agent to stop it when finished. Retained work remains available.
 
 ## What to expect
+
+The image above is a real screenshot of Stories reviewing a presentation it generated
+about its own development. [Image provenance](docs/images/README.md) describes the sources.
 
 Stories is an early implementation. Generation time and quality depend on the
 material and model. It checks source quotations and supported arithmetic, and uses
