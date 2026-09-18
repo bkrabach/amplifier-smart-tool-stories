@@ -266,3 +266,11 @@ HTTP success alone does not establish usable review.
   comment handling by internal intelligence and uninterrupted review during updates.
 - **2026-09-16** — First draft defining the optional built-in story review workspace,
   shared actions/settings, artifact fidelity and presentation lifecycle.
+
+## Optional portable presenter
+
+The MCP Apps presenter is a documented subset, governed by
+[mcp-app.v1.md](mcp-app.v1.md). It shares exact revisions, comments, drafts and
+direction choices with the native dashboard. Native human acceptance, provider
+login/runtime preparation and video export are not exposed in that presenter.
+It does not claim full dashboard parity or authenticate caller-reported authors.

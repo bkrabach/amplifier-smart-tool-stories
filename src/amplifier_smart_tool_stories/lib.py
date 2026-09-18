@@ -12,13 +12,14 @@ from pathlib import Path
 from .artifacts import digest, evidence_checked, parse_html, preview, validate_anchor
 from .errors import StoriesError, require
 from .media import MediaLibrary, bindings, select, warnings_for
+from .review_view import ReviewViewLibrary
 from .scripts import ScriptLibrary
 from .speech import NarrationLibrary
 from .store import Store, identity, now
 from .storyboard_library import StoryboardLibrary
 
 
-class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
+class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary, ReviewViewLibrary):
     def __init__(
         self,
         storage=None,
@@ -398,12 +399,12 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
             request_id, "add_comment", [story_id, revision_id, text, target, author], action
         )
 
-    def respond(self, story_id, annotation_id, text, request_id):
-        """Continue an annotation by submitting a user comment on the same exact target, with thread context."""
+    def respond(self, story_id, annotation_id, text, request_id, author="user"):
+        """Continue an annotation on its exact target; author=agent records a non-spending caller note."""
         story = self.get_story(story_id)
         note = next((n for n in story["annotations"] if n["id"] == annotation_id), None)
         require(note is not None, "Unknown annotation.")
-        return self.add_comment(story_id, note["revision_id"], text, request_id, note["anchor"], "user")
+        return self.add_comment(story_id, note["revision_id"], text, request_id, note["anchor"], author)
 
     def answer_question(self, operation_id, text, grant, request_id):
         """Answer a pending generation question with explicit bounded authority; retain its story and question chain."""
@@ -1006,6 +1007,8 @@ CAPABILITIES = [
     "get_revision",
     "get_preview",
     "select_revision",
+    "get_review_view",
+    "update_review_view",
     "grant_feedback",
     "add_comment",
     "respond",

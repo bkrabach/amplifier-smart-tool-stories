@@ -20,8 +20,12 @@ dependencies = [
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.12"]
+mcp = [
+    "mcp>=2.2,<3",
+]
 [project.scripts]
 stories = "amplifier_smart_tool_stories.cli:main"
+stories-mcp = "amplifier_smart_tool_stories.mcp:main"
 [project.urls]
 Repository = "https://github.com/robotdad/amplifier-smart-tool-stories"
 [build-system]

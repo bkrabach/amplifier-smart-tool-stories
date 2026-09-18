@@ -76,6 +76,9 @@ dev = [
     { name = "pytest" },
     { name = "ruff" },
 ]
+mcp = [
+    { name = "mcp" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -84,6 +87,7 @@ requires-dist = [
     { name = "beautifulsoup4", specifier = ">=4.12" },
     { name = "google-genai", specifier = ">=1" },
     { name = "jsonschema", specifier = ">=4.23" },
+    { name = "mcp", marker = "extra == 'mcp'", specifier = ">=2.2,<3" },
     { name = "openai", specifier = ">=1" },
     { name = "pillow", specifier = ">=11" },
     { name = "pypdfium2", specifier = ">=5.13.0" },
@@ -94,7 +98,7 @@ requires-dist = [
     { name = "tinycss2", specifier = ">=1.4" },
     { name = "weasyprint", specifier = ">=70.0" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["dev", "mcp"]
 
 [[package]]
 name = "annotated-doc"
