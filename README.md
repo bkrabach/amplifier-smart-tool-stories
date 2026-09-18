@@ -113,3 +113,8 @@ and [contracts](contracts/) describe the broader intent and behavioral requireme
 Clone the repository when you want to work on Stories itself.
 [`AGENTS.md`](AGENTS.md) covers checkout setup, architecture, validation and the
 contribution workflow. Agent callers should start with the installed help.
+
+Static presentations can also be exported as silent MP4 video through your agent,
+with an explicit duration for each slide. This requires ffmpeg and ffprobe, retains
+the original images, and adds no voiceover. Embedded clips and animation are not
+yet supported in video exports.

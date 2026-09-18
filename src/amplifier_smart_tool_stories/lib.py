@@ -779,6 +779,22 @@ class Stories(MediaLibrary):
             raise StoriesError("output_exists", "Output already exists; choose a new destination.") from None
         return {"status": "succeeded", "path": str(path), **result}
 
+    def export_video(self, story_id, revision_id, output_path, slide_seconds, timeout_seconds=300):
+        """Export static presentation slides as silent H.264 MP4 with explicit per-slide pacing; no TTS."""
+        from .media import image_payload
+        from .video import encode
+
+        revision = self.get_revision(story_id, revision_id)
+        with self.store.transaction() as db:
+            media = image_payload(db, revision.get("assets", []))
+        result = encode(revision, media, output_path, slide_seconds, timeout_seconds)
+        result["story_id"] = story_id
+        with self.store.transaction() as db:
+            self.store.event(
+                db, story_id, "video_exported", **{k: v for k, v in result.items() if k != "story_id"}
+            )
+        return result
+
     def storytelling_capabilities(self):
         """List supported writing approaches and their upstream mapping; generation selects relevant expertise from the request."""
         from .expertise import catalog
@@ -875,6 +891,7 @@ class Stories(MediaLibrary):
 
 
 CAPABILITIES = [
+    "export_video",
     "manifest",
     "import_media",
     "resize_media",
