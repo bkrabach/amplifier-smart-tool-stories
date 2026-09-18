@@ -401,3 +401,15 @@ removed. The completed MP4 is published only after verification, and an existing
 output is never replaced. CLI interrupts use Ctrl-C; this synchronous deterministic
 export does not create a cancellable model operation. Video export is available
 through the library/CLI; the dashboard's export choices remain HTML and ZIP.
+
+
+Storyboard reliability: Anthropic and OpenAI API submissions request native strict
+schemas through Amplifier; other adapters retain their supported tool-submission
+behavior. Storyboard responses are also schema-validated locally, with at most one
+structured correction per submission within the shared 12-call operation limit.
+Generation can produce a storyboard or ask for clarification, not return an answer
+in place of the requested artifact. Strict structure is not evidence of factual or
+creative quality. Review receives code-computed narration counts and provisional
+spoken-time estimates, not model-estimated word counts. Printed storyboard sheets begin with a separate direction overview,
+then the panel sequence. Production requirements stay optional and concise; timing
+is a provisional narration/visual budget, not a promise of produced video duration.

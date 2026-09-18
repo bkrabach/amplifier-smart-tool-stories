@@ -423,3 +423,15 @@ duration and no-audio checks. Successful exports retain this record in a
 the deck. `timeout_seconds` bounds work (default 300, 1–900); interruption stops
 subprocesses and cleans temporary files. Existing outputs are never overwritten.
 This is a synchronous library/CLI export, not a model operation or dashboard action.
+
+
+Storyboard reliability: Anthropic and OpenAI API submissions request native strict
+schemas through Amplifier; other adapters retain their supported tool-submission
+behavior. Storyboard responses are also schema-validated locally, with at most one
+structured correction per submission within the shared 12-call operation limit.
+Generation can produce a storyboard or ask for clarification, not return an answer
+in place of the requested artifact. Strict structure is not evidence of factual or
+creative quality. Review receives code-computed narration counts and provisional
+spoken-time estimates, not model-estimated word counts. Printed storyboard sheets begin with a separate direction overview,
+then the panel sequence. Production requirements stay optional and concise; timing
+is a provisional narration/visual budget, not a promise of produced video duration.

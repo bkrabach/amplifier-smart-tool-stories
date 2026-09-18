@@ -161,7 +161,7 @@ def test_media_zip_portable_exact_structure_and_layout(tmp_path):
             },
         )
     )
-    assert rendered["page_count"] == 2
+    assert rendered["page_count"] == 3
     assert not rendered["findings"]
     with pytest.raises(StoriesError):
         api.revise_media(sid, rid, [asset["id"]], "wrong-surface")
@@ -266,7 +266,8 @@ def test_renderer_escapes_and_changes_identity_for_direction_metadata():
     assert checked(original)["panels"][0]["id"] == "arrival"
 
 
-def test_real_pipeline_with_scripted_provider_reviews_both_directions(tmp_path, monkeypatch):
+@pytest.mark.parametrize("invalid", ["encoded", "wrong_action"])
+def test_real_pipeline_with_scripted_provider_reviews_both_directions(tmp_path, monkeypatch, invalid):
     from types import SimpleNamespace
 
     from amplifier_smart_tool_stories import intelligence
@@ -287,6 +288,10 @@ def test_real_pipeline_with_scripted_provider_reviews_both_directions(tmp_path, 
         return SimpleNamespace(create_session=create_session)
 
     composed = result(2)
+    for value in composed["candidates"]:
+        value.pop("evidence")
+        for panel in value["storyboard"]["panels"]:
+            panel["production_requirements"] = []
     composed["candidates"][1]["storyboard"]["approach"] = (
         "Reveal the coordination mechanism before following a request."
     )
@@ -302,7 +307,11 @@ def test_real_pipeline_with_scripted_provider_reviews_both_directions(tmp_path, 
             "plan": "Compare journey and mechanism",
             "limitations": [],
         },
-        {**composed, "candidates": '[{"storyboard": "unescaped "quote""}]'},
+        (
+            {**composed, "candidates": '[{"storyboard": "unescaped "quote""}]'}
+            if invalid == "encoded"
+            else {**composed, "action": "answer"}
+        ),
         composed,
         verdict,
         verdict,
@@ -325,16 +334,20 @@ def test_real_pipeline_with_scripted_provider_reviews_both_directions(tmp_path, 
     assert op["state"] == "succeeded", op
     assert op["result"]["provenance"]["model_calls"] == 6
     assert calls[0]["schema"]["properties"]["evidence"]["maxItems"] == 12
+    assert "answer" not in calls[1]["schema"]["properties"]["action"]["enum"]
     assert len(op["result"]["revision_ids"]) == 2
     for rid in op["result"]["revision_ids"]:
         rev = api.get_revision(receipt["story_id"], rid)
         assert rev["quality_review"]["artifact_sha256"] == rev["sha256"]
-        assert len(rev["quality_review"]["pages"]) == 2
+        assert len(rev["quality_review"]["pages"]) == 3
     assert isinstance(calls[3]["messages"][1]["content"], list)
+    review_payload = json.loads(calls[3]["messages"][1]["content"][0]["text"])
+    assert review_payload["narration_metrics"]["total_words"] == 4
     assert not answers
 
 
-def test_review_failure_repairs_once_and_preserves_successful_sibling(tmp_path, monkeypatch):
+@pytest.mark.parametrize("failure_stage", ["semantic", "comparison"])
+def test_review_failure_repairs_once_and_preserves_successful_sibling(tmp_path, monkeypatch, failure_stage):
     from amplifier_smart_tool_stories import storyboard_intelligence
     from amplifier_smart_tool_stories.storyboard_intelligence import compose
 
@@ -362,6 +375,12 @@ def test_review_failure_repairs_once_and_preserves_successful_sibling(tmp_path, 
         candidate(board("Repair")),
         failed,
     ]
+    if failure_stage == "comparison":
+        answers = answers[:2] + [
+            passed,
+            passed,
+            {"status": "failed", "findings": ["Same narrative structure"]},
+        ]
     calls = []
 
     async def ask(*args, **kwargs):
@@ -374,8 +393,12 @@ def test_review_failure_repairs_once_and_preserves_successful_sibling(tmp_path, 
     monkeypatch.setattr(storyboard_intelligence, "render", rendered)
     outcome = asyncio.run(compose(story, operation, ask, calls))
     assert len(outcome["candidates"]) == 1
-    assert outcome["failures"][0]["code"] == "quality_review_failed"
-    assert len(outcome["review_attempts"][1]["reviews"]) == 2
+    if failure_stage == "semantic":
+        assert outcome["failures"][0]["code"] == "quality_review_failed"
+        assert len(outcome["review_attempts"][1]["reviews"]) == 2
+    else:
+        assert outcome["failures"][0]["code"] == "comparison_review_failed"
+        assert outcome["review_attempts"][-1]["comparison"]["findings"] == ["Same narrative structure"]
     assert not answers
     api.intelligence = lambda story, op: outcome
     op = api.run_operation(operation["id"])
@@ -407,3 +430,44 @@ def test_optional_production_requirements_portable_without_tracking(tmp_path):
         revised["panels"][0]["production_requirements"] = invalid
         with pytest.raises(StoriesError):
             checked(revised)
+
+
+def test_direction_overview_does_not_orphan_production_panel_copy():
+    from bs4 import BeautifulSoup
+
+    value = board()
+    value["approach"] = "Follow the request, then explain the mechanism and its limits. " * 7
+    value["tradeoff"] = (
+        "The visual explanation needs room for a clear example and a careful qualification. " * 5
+    )
+    panel = value["panels"][0]
+    panel["visual"] = "A conceptual client and service diagram with a keyed result store. " * 3
+    panel["narration"] = "The same request returns its recorded result within this demonstration. " * 4
+    panel["production_requirements"] = [
+        "Draw the client, service and keyed result store; label this as an illustration, not a capture.",
+        "Record the request and repeat request in a real demo; retain the matching result and visible key.",
+        "Keep the retention limit legible while the result appears, synchronized with narration.",
+        "Use a labeled planned capture frame until the recording exists; do not fabricate product evidence.",
+    ]
+    rendered_html = render_storyboard(value)
+    soup = BeautifulSoup(rendered_html, "html.parser")
+    assert soup.select_one("#direction-approach").find_parent(class_="storyboard-panel") is None
+    rendered = asyncio.run(render(rendered_html, 40))
+    assert rendered["page_count"] == 3  # Intentional overview plus two complete panel sheets.
+    assert not rendered["findings"]
+
+
+def test_narration_counts_are_computed_not_model_estimates():
+    from amplifier_smart_tool_stories.storyboard_intelligence import narration_metrics
+
+    value = board()
+    value["panels"][0]["narration"] = "One two three four five."
+    value["panels"][1]["narration"] = "Six seven eight nine ten."
+    metrics = narration_metrics(value)
+    assert metrics["panel_word_counts"] == [5, 5]
+    assert metrics["total_words"] == 10
+    assert metrics["spoken_seconds_at_150_wpm"] == 4
+    assert metrics["spoken_seconds_at_120_wpm"] == 5
+    for panel in value["panels"]:
+        panel["narration"] = ""
+    assert narration_metrics(value)["total_words"] == 0

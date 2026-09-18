@@ -158,6 +158,7 @@ def test_native_submission_uses_schema_and_rejects_missing_submission():
     assert json.loads(text) == {"submitted": True}
     assert p.calls[0].tools[0].parameters == REVIEW
     assert p.calls[0].tool_choice == "required"
+    assert p.calls[0].tools[0].strict is True
 
     async def missing(request):
         return SimpleNamespace(content=[], usage=None, tool_calls=[])
@@ -320,3 +321,14 @@ def test_login_timeout_is_actionable(monkeypatch):
         providers.provider_login(ProviderConfig("chatgpt"), 1)
     assert exc.value.code == "provider_login_failed"
     assert "Sign in" in exc.value.public()["error"]["remedy"]
+
+
+def test_anthropic_submission_uses_native_strict_custom_tool():
+    from amplifier_smart_tool_stories.providers import submission_tool
+    from amplifier_smart_tool_stories.submissions import REVIEW
+
+    tool = submission_tool(ProviderConfig("anthropic"), REVIEW)
+    assert tool.type == "custom"
+    assert tool.strict is True
+    assert tool.input_schema["properties"]["semantic"]["type"] == "object"
+    assert tool.input_schema["additionalProperties"] is False

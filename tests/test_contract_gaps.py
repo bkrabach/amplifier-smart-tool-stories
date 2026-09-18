@@ -147,3 +147,32 @@ def test_calculation_disclosure_is_bound_to_review():
     original = disclosure_hash(result)
     result["changes"]["omissions"].append("Removed a measurement caveat")
     assert disclosure_hash(result) != original
+
+
+@pytest.mark.parametrize(
+    "quote,values,result",
+    [
+        ("Subscription $24,000. Setup $6,000.", ["24000", "6000"], "30000"),
+        ("Rates were 90% and 37.5%.", ["90.0", "37.50"], "127.5"),
+    ],
+)
+def test_calculation_sentence_punctuation_and_equivalent_decimals(quote, values, result):
+    candidate = calculation_result()
+    candidate["evidence"][0]["quote"] = quote
+    calculation = candidate["calculations"][0]
+    calculation.update(operation="sum", result=result, decimal_places=1)
+    for operand, value in zip(calculation["inputs"], values):
+        operand["value"] = value
+    validate_disclosures(candidate, {}, {})
+    candidate["calculations"][0]["inputs"][0]["value"] = "900"
+    with pytest.raises(StoriesError, match="not present"):
+        validate_disclosures(candidate, {}, {})
+
+
+@pytest.mark.parametrize("quote", ["version1.10", "v24000", "1.24000", "24000ms"])
+def test_calculation_does_not_extract_numeric_fragments(quote):
+    candidate = calculation_result()
+    candidate["evidence"][0]["quote"] = quote
+    candidate["calculations"][0]["inputs"][0]["value"] = "24000"
+    with pytest.raises(StoriesError, match="not present"):
+        validate_disclosures(candidate, {}, {})

@@ -51,7 +51,7 @@ def execute(story, operation, cancelled):
             provider = next(iter(mounted.values()))
             calls = []
 
-            async def ask(instruction, payload, images=None, schema=COMPOSITION):
+            async def ask_once(instruction, payload, images=None, schema=COMPOSITION):
                 require(not cancelled(), "Operation cancelled.", "cancelled")
                 require(
                     len(calls)
@@ -103,6 +103,38 @@ def execute(story, operation, cancelled):
 
                     result = decode_containers(result, schema)
                 return result
+
+            async def ask(instruction, payload, images=None, schema=COMPOSITION):
+                from jsonschema import Draft202012Validator
+
+                result = await ask_once(instruction, payload, images, schema)
+                if story.get("kind") != "storyboard":
+                    return result
+                for attempt in range(2):
+                    errors = list(Draft202012Validator(schema).iter_errors(result))
+                    details = [
+                        f"{'.'.join(map(str, error.absolute_path)) or '$'}: {error.message[:1500]}"
+                        for error in errors[:8]
+                    ]
+                    if isinstance(result, dict) and "candidates" in result:
+                        candidates = result["candidates"]
+                        if result.get("action") == "revise" and candidates == []:
+                            details.append("candidates: revise requires at least one whole storyboard.")
+                        if result.get("action") in {"answer", "clarify"} and candidates:
+                            details.append("candidates: answer/clarify must not submit storyboards.")
+                    if not details:
+                        return result
+                    if attempt:
+                        raise StoriesError(
+                            "invalid_model_result", "Invalid submission: " + "; ".join(details)
+                        )
+                    result = await ask_once(
+                        instruction + "\nCorrect only the reported submission errors. Preserve the original "
+                        "operation, content and constraints. Return native objects/arrays, not encoded JSON strings.",
+                        {"request": payload, "invalid_submission": result, "validation_errors": details},
+                        images,
+                        schema,
+                    )
 
             if story.get("kind") == "storyboard":
                 from .storyboard_intelligence import compose

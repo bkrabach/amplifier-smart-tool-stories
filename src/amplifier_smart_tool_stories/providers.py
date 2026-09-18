@@ -228,8 +228,30 @@ def prepare_runtime(config):
         ) from None
 
 
+def submission_tool(config, schema):
+    """Use the provider's native strict submission format where supported.
+
+    Anthropic custom-tool passthrough preserves strict/input_schema; the generic
+    function conversion in the installed adapter drops strict. No cache patches.
+    """
+    from amplifier_core.message_models import ToolSpec
+
+    fields = {
+        "name": "submit_result",
+        "description": "Submit the requested structured result. No external action.",
+        "parameters": schema,
+    }
+    if config.provider == "anthropic":
+        from anthropic import transform_schema
+
+        fields.update(type="custom", input_schema=transform_schema(copy.deepcopy(schema)), strict=True)
+    elif config.provider == "openai":
+        fields["strict"] = True
+    return ToolSpec(**fields)
+
+
 async def complete(provider, config, messages, max_tokens, timeout, schema=None):
-    from amplifier_core.message_models import ChatRequest, Message, ToolSpec
+    from amplifier_core.message_models import ChatRequest, Message
 
     response = await provider.complete(
         ChatRequest(
@@ -237,15 +259,7 @@ async def complete(provider, config, messages, max_tokens, timeout, schema=None)
             model=config.model,
             max_output_tokens=max_tokens,
             timeout=timeout,
-            tools=[
-                ToolSpec(
-                    name="submit_result",
-                    description="Submit the requested structured result. No external action.",
-                    parameters=schema,
-                )
-            ]
-            if schema
-            else None,
+            tools=[submission_tool(config, schema)] if schema else None,
             tool_choice="required" if schema else None,
         )
     )

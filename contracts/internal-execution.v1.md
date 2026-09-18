@@ -73,6 +73,10 @@ alternative directions and structured visual sequences.
    produced artifacts, evidence, checks and limitations. Library code verifies the
    declared outcome, required fields, reference integrity, output scope, artifact
    existence, nonempty content and format before publishing a completed result.
+   Request provider-native schema enforcement where supported and validate the
+   response locally. Operation-specific submissions exclude outcomes invalid for
+   that operation. Bounded structured corrections preserve the original intent and
+   share its allowance; no silent fallback from strict to unvalidated submissions.
    Required checks must concern the submitted revision. Missing or invalid artifacts
    cannot become success because the model says they are done. Documented partial
    outcomes enumerate completed and missing parts; other incomplete work fails.

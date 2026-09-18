@@ -39,8 +39,11 @@ def validate_disclosures(result, story, operation):
                 re.fullmatch(r"-?\d+(?:\.\d+)?", value) is not None,
                 "Use plain decimal inputs without separators.",
             )
-            numbers = re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?(?![\w.])", fact["quote"].replace(",", ""))
-            require(value in numbers, "Calculation input is not present in its cited quote.")
+            numbers = re.findall(r"(?<![\w.])-?\d+(?:\.\d+)?(?!\w|\.\d)", fact["quote"].replace(",", ""))
+            require(
+                Decimal(value) in {Decimal(number) for number in numbers},
+                "Calculation input is not present in its cited quote.",
+            )
             values.append(Decimal(value))
         places = item.get("decimal_places")
         require(type(places) is int and 0 <= places <= 12, "decimal_places must be 0–12.")

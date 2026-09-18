@@ -7,7 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
   "amplifier-agent @ git+https://github.com/microsoft/amplifier-agent@main",
   "openai>=1",
-  "anthropic>=0.70",
+  "anthropic>=1.4",
   "google-genai>=1",
   "beautifulsoup4>=4.12",
   "PyYAML>=6",
@@ -16,6 +16,7 @@ dependencies = [
   "python-docx>=1.2",
   "Pillow>=11",
   "tinycss2>=1.4",
+  "jsonschema>=4.23",
 ]
 [project.optional-dependencies]
 dev = ["pytest>=8", "ruff>=0.12"]

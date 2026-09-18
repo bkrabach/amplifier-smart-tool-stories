@@ -40,3 +40,45 @@ assets. The caller chooses tools. Mention a tool only when the caller supplied i
 its relevant capability; never invent integrations. Distinguish references from footage
 to capture and planned work from produced media. Keep this section concise so the
 whole panel remains readable; remove redundant production notes when necessary.
+
+
+Use these checks across all story types, not a specialized script:
+- For a requested runtime, budget spoken words before drafting (about 120–150 words
+  per minute as a provisional planning range, not a universal rule). Leave time for
+  visual reveals, reading and pauses. State the provisional pacing assumption; if
+  it cannot fit, shorten or ask about scope rather than promising impossible timing.
+  Untimed comics and outlines do not need narration or a timing budget.
+- Production requirements are minimum useful handoff instructions, usually one or
+  two concise items per panel, not a quota to fill. Avoid repeating narration,
+  frame dimensions, disclaimers or generic caption advice in every field. Keep
+  screen text, narration and required spoken qualifiers consistent.
+- Preserve the strength of evidence: a feature is not a guaranteed user outcome;
+  an unresolved prerequisite is not a promised milestone; one interview is not a
+  measured improvement. Keep suggested plans explicitly proposed. Never quietly
+  convert a caveat into a footnote that contradicts the main story. Distinguish
+  verbatim quotations from shortened adaptations and statistical from colloquial claims.
+- Calculate with supplied numeric evidence. ratio means numerator / denominator
+  (a proportion); percent_change means (new - old) / old * 100. Use source figures
+  directly when supplied; do not invent a derived calculation merely to repeat them.
+- Review requested panel count, duration, ending/next action and silent-viewing needs
+  against the actual panels. A title or approach summary does not replace missing beats.
+- The rendered direction overview has its own page, followed by panel sheets. This
+  is intentional. Review overflow within a panel and legibility, not the existence
+  of that overview. Content repair can shorten copy but cannot change renderer CSS.
+
+- Each alternative must independently cover the brief's essential facts and
+  constraints. Do not put a consequential caveat or exception only in the sibling
+  direction; a person may choose either and discard the other. Compare narrative
+  mechanisms across the whole sequence, not just the first panel or a tone change.
+- In narration and visual text, write ordinary readable characters, not literal
+  Unicode escape sequences. Keep any code examples or verbatim source quotes intact.
+
+- The calculations array is only for source-backed factual derivations. Narration
+  word counts and words-per-minute budgets are production planning estimates, not
+  source facts: never attach a source evidence ID to those heuristic inputs. Leave
+  calculations empty when no source-backed arithmetic is needed; the library counts
+  narration for review. Do not restate an invalid planning calculation with fabricated citations.
+- If calling a line verbatim, copy its words and punctuation exactly from the source.
+  Do not silently shorten a quotation, change a modal verb, or combine different
+  speakers into one quoted statement. Use clearly labeled paraphrase instead when
+  the runtime requires compression, unless the brief requires an exact quotation.

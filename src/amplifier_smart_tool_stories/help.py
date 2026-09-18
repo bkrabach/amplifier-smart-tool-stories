@@ -77,7 +77,7 @@ GUIDANCE = {
     "generate_storyboard": (
         "Develop a rough idea with shared storyboarding expertise; sources may be empty for clearly creative work.",
         "Queued story_id/operation_id. Read get-operation for needs_input, succeeded, partial or failed; results list revision_ids and failures.",
-        "Ordinary creation produces one direction. Set explore=true only when the person requests alternatives; then two substantive approaches share one deadline and at most 12 model calls, with one repair per candidate. Uses the configured Amplifier Agent provider and rendered review. Read-only comparison never generates. Only supplied still images are available; planned visuals are not image generation. Use answer-question for initial clarification, comments for refinement. Live output quality remains model-reviewed, not independent proof.",
+        "Ordinary creation produces one direction. Set explore=true only when the person requests alternatives; then two substantive approaches share one deadline and at most 12 model calls, with one repair per candidate. Uses the configured Amplifier Agent provider and rendered review. Anthropic/OpenAI API request strict submissions; storyboard schemas are also checked locally with bounded correction. Printed sheets have a separate direction overview. Read-only comparison never generates. Only supplied still images are available; planned visuals are not image generation. Use answer-question for initial clarification, comments for refinement. Live output quality remains model-reviewed, not independent proof.",
     ),
     "revise_storyboard": (
         "Retain an explicit structured edit, attach supplied images, or import an explicitly requested alternative.",

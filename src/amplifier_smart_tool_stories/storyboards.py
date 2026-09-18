@@ -33,6 +33,18 @@ BOARD = obj(
 )
 
 
+# Advertise the same content limits that deterministic imports enforce. Native
+# providers may simplify unsupported JSON Schema limits; local validation retains them.
+for _field in ("name", "approach", "tradeoff"):
+    BOARD["properties"][_field] = {"type": "string", "maxLength": 500}
+for _field in ("title", "action", "visual", "asset_id", "narration", "notes"):
+    PANEL["properties"][_field] = {
+        "type": "string",
+        "maxLength": 500 if _field in {"title", "asset_id"} else 1200,
+    }
+PANEL["properties"]["production_requirements"]["items"] = {"type": "string", "minLength": 1, "maxLength": 500}
+
+
 def text(value, label, maximum=2000, nonempty=False):
     require(
         isinstance(value, str) and len(value) <= maximum and (not nonempty or bool(value.strip())),
@@ -118,7 +130,19 @@ def checked(board, evidence=None, assets=None, fidelity="mixed"):
 
 def render_storyboard(board, evidence=None, assets=None, fidelity="mixed"):
     board = checked(board, evidence, assets, fidelity)
-    chunks = []
+    chunks = [
+        '<header class="storyboard-direction" id="direction-summary"><p class="eyebrow">Storyboard direction</p>'
+        + "<h1>"
+        + escape(board["name"])
+        + '</h1><h2>Approach</h2><p id="direction-approach">'
+        + escape(board["approach"])
+        + '</p><h2>Tradeoff</h2><p id="direction-tradeoff">'
+        + escape(board["tradeoff"])
+        + '</p><p class="references">'
+        + str(len(board["panels"]))
+        + " panels · Visuals without images are production plans, not produced media."
+        + "</p></header>"
+    ]
     for index, panel in enumerate(board["panels"]):
         pid = "panel-" + panel["id"]
         image = (
@@ -153,15 +177,6 @@ def render_storyboard(board, evidence=None, assets=None, fidelity="mixed"):
                 + escape(", ".join(panel["evidence_ids"]))
                 + "</p>"
             )
-        if index == 0:
-            details += (
-                '<div><strong>Direction</strong><p id="direction-approach">'
-                + escape(board["approach"])
-                + "</p>"
-            )
-            if board["tradeoff"]:
-                details += '<p id="direction-tradeoff">Tradeoff: ' + escape(board["tradeoff"]) + "</p>"
-            details += "</div>"
         chunks.append(
             f'<section class="storyboard-panel" id="{pid}">'
             f'<p id="{pid}-position" class="eyebrow">{index + 1} / {len(board["panels"])} · {escape(board["name"])}</p>'
