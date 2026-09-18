@@ -28,6 +28,10 @@ VALUES = {
             }
         ],
     },
+    "script_id": "SCRIPT_ID",
+    "notes": ["Here is why this change matters to the team."],
+    "narration_id": "NARRATION_ID",
+    "slide": 1,
     "slide_seconds": [10],
     "asset_id": "ASSET_ID",
     "asset_ids": ["ASSET_ID"],
@@ -99,10 +103,65 @@ GUIDANCE = {
         "items with exact revision/direction identities, rationale, superseded state and isolated preview payloads.",
         "Works for storyboard, document and presentation revisions in the same story. Omit revision_ids for the latest two direction heads, or latest two ordinary revisions. No assumption of matching page counts; revisions of one direction are not mislabeled as different generated approaches. Alternative generation for documents/presentations remains unavailable.",
     ),
+    "prepare_narration": (
+        "Prepare or refine a coherent spoken presentation, without requiring a speech provider.",
+        "Operation ID; poll get-operation, then read result.script_id with get-narration-script. Retained script versions leave deck and speaker notes unchanged.",
+        "Uses the configured writing provider through Amplifier Agent with model_env. Sends the selected deck, notes, retained sources, optional base script and guidance. Defaults favor audience relevance, explanation beyond bullets, supported examples, meaningful transitions and a useful ending. Optional target_seconds is approximate writing guidance, not audio timing. At most four model calls (composition, review, one repair and re-review) within the ordinary writing grant and deadline. Model review is not human approval. Never invokes speech or requires a speech key. Use background execution or queued plus run-operation; exact retries do not restart. Guided refinement names base_script_id; no silent edits to earlier scripts. Failed candidates/reviews remain on the operation.",
+    ),
+    "get_narration_script": (
+        "Read a retained spoken script.",
+        "Script identity, exact revision, ordered passages, references, limitations, timing estimate and review.",
+        "Provider-free. Script references to slides/notes preserve their claims, not independent factual verification. Estimated duration is not measured audio.",
+    ),
+    "list_narration_scripts": (
+        "Find scripts for a story and optionally one revision.",
+        "Retained script versions in creation order.",
+        "Read-only; no writing or synthesis occurs.",
+    ),
+    "save_narration_script": (
+        "Save explicit spoken text or edits as a new script version.",
+        "script_id for inspection or generate-narration.",
+        "No model use. One nonempty string per slide, up to 4000 characters. Optional base_script_id must match the revision. Edits do not inherit model review or alter earlier scripts/audio/deck notes. Use prepare-narration for guided writing; use this for caller-authored text.",
+    ),
+    "narration_settings": (
+        "Inspect available speech configuration.",
+        "Effective store-scoped settings and credential presence.",
+        "No network call. Key presence does not prove speech access. Anthropic, ChatGPT sign-in and Copilot are unsupported for speech.",
+    ),
+    "configure_narration": (
+        "Choose speech settings independently of writing settings.",
+        "Effective store-scoped narration settings.",
+        "OpenAI or Gemini only. Existing native API keys are reused. Model and voice have provider defaults. This call does not synthesize, test access or spend.",
+    ),
+    "get_speaker_notes": (
+        "Read the notes attached to a slide revision.",
+        "Revision ID and ordered note texts.",
+        "Empty notes stay empty; no automatic adaptation or rewriting.",
+    ),
+    "list_narrations": (
+        "Find retained narration or work in progress.",
+        "Narration records for the story and optional revision.",
+        "Read-only; never starts or resumes synthesis.",
+    ),
+    "generate_narration": (
+        "Synthesize and retain per-slide narration.",
+        "Operation and narration IDs. Inspect get-operation and get-narration; get-narration-audio returns completed WAVs.",
+        "Use prepare-narration first when a spoken story needs writing, then supply script_id. Alternatively supply notes or omit both to speak existing notes verbatim. script_id and notes are mutually exclusive. Requires configured narration and model_env for new synthesis. Sends exact notes and delivery instructions to the chosen OpenAI/Gemini paid API directly, without an agent runtime. Voices are AI-generated. Defaults: 12 requests, 24000 text characters, 300 seconds; grant accepts max_requests (1–100), max_characters (1–200000), timeout_seconds (1–900). Notes must be nonempty, at most 4000 characters per slide. Identical text/settings reuse retained WAV without a provider request; settings are frozen at submission. Up to three distinct slide requests run in parallel by default (concurrency 1–8), sharing the same total request/character/deadline allowance. Duplicate text/settings share one request; partial results keep their actual slide numbers. SDK retries are disabled. Exact request retries never spend again. Partial completed audio survives failure/cancellation. Uncertain calls require a new request with retry_uncertain=true; simultaneous identical calls fail busy. Use background execution for UI or queued plus run-operation. cancel-operation prevents late commits; in-flight provider spending can occur.",
+    ),
+    "get_narration": (
+        "Inspect narration notes, settings, progress and audio identities.",
+        "Retained narration record.",
+        "Read-only and provider-free; state does not imply spoken fidelity or human approval.",
+    ),
+    "get_narration_audio": (
+        "Listen to a completed slide or reuse its audio.",
+        "WAV metadata and data_base64.",
+        "One-based slide number. Completed audio remains readable after partial failure. AI-generated speech is not automatically verified for fidelity.",
+    ),
     "export_video": (
-        "Deliver a static presentation as a silent video.",
+        "Deliver static slides as silent or narrated video, or a post-production package.",
         "MP4 path, output/revision hashes, retained timeline, asset identities and separate decode/timing checks.",
-        "Supply an .mp4 output_path and slide_seconds with one positive duration per slide, aligned to 30 fps. Requires ffmpeg (libx264), ffprobe and Pango. Encodes 1280x720 H.264 with cuts and no audio. Static HTML and retained static images only; scripts, external dependencies, animations and embedded clips are unsupported. No TTS or model access. Notes are retained in the timing record, not spoken or used to infer durations. timeout_seconds bounds rendering, encoding and verification (default 300, maximum 900). Interrupting terminates active encoder work and removes temporary files; no partial MP4 is published. Never overwrites. Successful plans are retained in read-changes events. Inspect video before delivery; decode checks are not visual approval.",
+        "Supply an .mp4 output_path and slide_seconds with one positive duration per slide, aligned to 30 fps. Requires ffmpeg (libx264), ffprobe and Pango. Encodes 1280x720 H.264 with cuts; audio is absent unless narration_id is supplied. Static HTML and retained static images only; scripts, external dependencies, animations and embedded clips are unsupported. No TTS occurs during this export. Supply narration_id to use completed audio for the same revision; embedded MP4 is the default. delivery=separate returns a ZIP with silent video, full WAV, per-slide WAVs and timing manifest. Both modes share the retained render/timing plan. With narration, omit slide_seconds to derive pacing from measured audio plus pause_seconds (default 0.5); conflicting fixed durations fail. Without narration, explicit slide_seconds is required. timeout_seconds bounds rendering, encoding and verification (default 300, maximum 900). Interrupting terminates active encoder work and removes temporary files; no partial MP4 is published. Never overwrites. Successful plans are retained in read-changes events. Inspect video before delivery; decode checks are not visual approval.",
     ),
     "import_media": (
         "Retain a supplied image, video or caption track without changing it.",
@@ -285,6 +344,20 @@ FIELD_HELP = {
     "fidelity": "outline, mixed or illustrated; illustrated requires retained images for every panel",
     "new_direction": "Explicitly branch an imported structured edit as a separate direction",
     "revision_ids": "One or two exact revision IDs in this story; omitted uses latest direction heads or versions",
+    "concurrency": "Maximum simultaneous distinct speech requests (1–8, default 3); one shared grant",
+    "draft_notes": "Optional editable starting passages, one per slide; empty entries allowed; up to 4000 characters each",
+    "script_id": "Exact retained spoken-script ID for this revision; mutually exclusive with notes",
+    "base_script_id": "Earlier script for guided refinement or manual edit lineage, on the same revision",
+    "guidance": "Optional tone, audience emphasis or refinement request (up to 8000 characters)",
+    "target_seconds": "Approximate total spoken duration, 10–7200 seconds; omitted uses content-led pacing",
+    "narration_id": "Retained narration identity matching the exact revision",
+    "notes": "Optional explicit list of narration texts, one per slide; omitted reads retained speaker notes",
+    "instructions": "Speech delivery instructions, separate from the text to speak",
+    "voice": "Provider speech voice identifier",
+    "slide": "One-based slide number",
+    "retry_uncertain": "Explicitly authorize another attempt after an uncertain potentially billed request",
+    "delivery": "embedded (default MP4) or separate (post-production ZIP)",
+    "pause_seconds": "Silence after each slide narration, default 0.5 seconds",
     "slide_seconds": "One positive duration per slide, in seconds aligned to 30 fps",
     "asset_id": "Retained asset identity returned by import-media or resize-media",
     "asset_ids": "Complete list of retained assets available to this presentation; reference them as asset:ASSET_ID",
@@ -330,7 +403,12 @@ def example(name):
         for key, parameter in parameters.items()
         if key != "self" and parameter.default is inspect.Parameter.empty
     }
+    if name == "generate_narration":
+        data["grant"] = {"max_requests": 12, "max_characters": 24000, "timeout_seconds": 300}
+    if name == "configure_narration":
+        data["provider"] = "openai"
     if name == "export_video":
+        data["slide_seconds"] = [10]
         data["output_path"] = "/tmp/stories-brief.mp4"
     if name == "import_media":
         data["path"] = "/tmp/poster.png"

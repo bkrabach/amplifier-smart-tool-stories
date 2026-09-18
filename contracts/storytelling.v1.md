@@ -69,6 +69,12 @@ rough ideas, alternative directions and progressively developed visual sequences
    inspectable at the requested fidelity; structural validity and stylistic variation
    alone do not establish useful creative choice. Review distinguishes narrative
    judgment and audience-comprehension evidence from source and rendering checks.
+   Spoken presentation adaptations establish an audience-relevant takeaway, add
+   explanation beyond slide recitation, connect the sequence and reach a useful
+   conclusion. Concrete examples and implications remain within the evidence;
+   rhetorical effectiveness cannot justify invented stakes, motives or outcomes.
+   Speaker notes inform adaptation without requiring every presentation to have
+   a finished narration script.
 
 ## What v1 deliberately does NOT freeze
 

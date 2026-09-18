@@ -195,3 +195,41 @@ def test_acceptance_route_is_scoped_and_retained(server):
     assert json.load(post(s, "get-story", {}))["acceptances"] == [result["acceptance"]]
     with pytest.raises(urllib.error.HTTPError):
         post(s, "accept-revision", {"revision_id": "other", "request_id": "bad-accept"})
+
+
+def test_narration_dashboard_scope_and_no_path_input(server):
+    s, r, other_op = server
+    with post(s, "configure-narration", {"provider": "openai", "request_id": "speech-settings"}) as response:
+        assert json.load(response)["effective"]["provider"] == "openai"
+    with post(s, "narration-settings", {}) as response:
+        assert json.load(response)["model_access"] is False
+    with post(s, "get-speaker-notes", {"revision_id": r["revision_id"]}) as response:
+        assert json.load(response)["notes"] == []
+    for name, data in [
+        ("cancel-operation", {"operation_id": other_op}),
+        (
+            "narrated-download",
+            {"revision_id": r["revision_id"], "narration_id": "x", "output_path": "/tmp/unowned.mp4"},
+        ),
+        ("get-speaker-notes", {"revision_id": s.api.get_operation(other_op)["revision_id"]}),
+    ]:
+        with pytest.raises(urllib.error.HTTPError):
+            post(s, name, data)
+
+
+def test_script_routes_are_scoped_and_preparation_is_not_speech(server):
+    s, r, other_op = server
+    with post(s, "list-narration-scripts", {"revision_id": r["revision_id"]}) as response:
+        assert json.load(response) == {"scripts": []}
+    other_revision = s.api.get_operation(other_op)["revision_id"]
+    for name, data in [
+        ("prepare-narration", {"revision_id": other_revision, "grant": {}, "request_id": "wrong-script"}),
+        (
+            "save-narration-script",
+            {"revision_id": other_revision, "notes": ["Private"], "request_id": "wrong-script-save"},
+        ),
+        ("list-narration-scripts", {"revision_id": other_revision}),
+    ]:
+        with pytest.raises(urllib.error.HTTPError):
+            post(s, name, data)
+    assert s.api.narration_settings()["effective"] is None

@@ -425,7 +425,7 @@ body.review-hidden #previewNotice {
   display: none;
 }
 
-#providerDialog {
+:is(#providerDialog, #narrationDialog) {
   color-scheme: light;
   width: min(500px, calc(100vw - 32px));
   max-height: calc(100vh - 48px);
@@ -437,21 +437,21 @@ body.review-hidden #previewNotice {
   box-shadow: 0 16px 70px #0004;
   overflow: auto;
 }
-#providerDialog::backdrop {
+:is(#providerDialog, #narrationDialog)::backdrop {
   background: #101c1840;
 }
-#providerDialog h2 {
+:is(#providerDialog, #narrationDialog) h2 {
   margin: 0;
   font-size: 20px;
 }
-#providerDialog label {
+:is(#providerDialog, #narrationDialog) label {
   display: block;
   margin: 16px 0 6px;
   font-size: 13px;
   font-weight: 600;
 }
-#providerDialog input,
-#providerDialog select {
+:is(#providerDialog, #narrationDialog) input,
+:is(#providerDialog, #narrationDialog) select {
   width: 100%;
   padding: 10px 12px;
   border: 1px solid #b6c2bb;
@@ -460,25 +460,25 @@ body.review-hidden #previewNotice {
   color: #27362e;
   font: inherit;
 }
-#providerDialog button {
+:is(#providerDialog, #narrationDialog) button {
   color: #315e49;
   background: #f0f5f1;
   border-color: #c8d5cc;
   font-size: 13px;
 }
-#providerDialog button:hover {
+:is(#providerDialog, #narrationDialog) button:hover {
   background: #e3ede6;
 }
-#providerDialog #providerApply {
+:is(#providerDialog, #narrationDialog) #providerApply {
   background: #315e49;
   color: white;
 }
-#providerDialog .settings-muted {
+:is(#providerDialog, #narrationDialog) .settings-muted {
   color: #62766a;
   font-size: 12px;
   line-height: 1.55;
 }
-#providerDialog .settings-actions {
+:is(#providerDialog, #narrationDialog) .settings-actions {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -495,6 +495,13 @@ body.review-hidden #previewNotice {
 #providerResult:empty {
   display: none;
 }
-#providerDialog .settings-footnote {
+:is(#providerDialog, #narrationDialog) .settings-footnote {
   margin-bottom: 0;
 }
+
+#narrationDialog { width: min(760px, calc(100vw - 32px)); }
+#narrationDialog textarea { background: white; color: #27362e; border: 1px solid #b6c2bb; border-radius: 8px; padding: 10px 12px; font: inherit; }
+#narrationDialog input[type="checkbox"] { width: auto; margin-right: 8px; }
+#narrationDialog button { margin: 8px 4px 0 0; }
+#narrationDialog audio { width: 100%; }
+#narrationDialog p { line-height: 1.5; overflow-wrap: anywhere; }

@@ -122,7 +122,14 @@ Clone the repository when you want to work on Stories itself.
 [`AGENTS.md`](AGENTS.md) covers checkout setup, architecture, validation and the
 contribution workflow. Agent callers should start with the installed help.
 
-Static presentations can also be exported as silent MP4 video through your agent,
-with an explicit duration for each slide. This requires ffmpeg and ffprobe, retains
-the original images, and adds no voiceover. Embedded clips and animation are not
-yet supported in video exports.
+Static presentations can also be exported as MP4 video. Keep it silent with explicit
+slide durations, or narrate your speaker notes with an OpenAI or Gemini API key.
+In Story details, **Narration & video** can prepare a spoken story from the whole
+deck and any speaker notes. Guide its tone, emphasis or length, or edit it directly.
+Script writing uses your writing provider and works without a speech provider.
+Choose a voice separately when you want to synthesize and export with audio embedded. Narration is retained for reuse; an optional
+post-production ZIP contains silent video, the full audio track, individual slide
+audio and timing information. Slides stay visible for their narration plus a pause.
+Speech uses the provider’s paid API, independently of your writing provider.
+Video export requires ffmpeg and ffprobe; embedded clips and animation remain
+unsupported in video exports.

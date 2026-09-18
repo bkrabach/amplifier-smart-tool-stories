@@ -17,7 +17,7 @@ requires:
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
   - name: ffmpeg
-    purpose: ffmpeg with libx264 and ffprobe for silent video export; ffprobe also inspects imported clips.
+    purpose: ffmpeg with libx264 and ffprobe for video export; ffprobe also inspects imported clips.
     optional: true
     install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/USAGE.md
   - name: pango
@@ -413,7 +413,7 @@ can be parsed.
 30-fps H.264 MP4. Supply the exact story/revision, a new `.mp4` output path and
 `slide_seconds` (one positive duration per slide aligned to 30 fps). Requires
 Pango, ffmpeg with libx264, and ffprobe on PATH; `brew install ffmpeg` on macOS.
-No model, narration, TTS or audio track. Notes are retained as provenance; timing
+Without a narration ID there is no audio track. Notes are retained as provenance; timing
 is explicit rather than estimated. Scripts, CSS animation, animated images and
 embedded clips are rejected. Use HTML/ZIP for interactive or playable media.
 
@@ -422,7 +422,93 @@ duration and no-audio checks. Successful exports retain this record in a
 `video_exported` change event. Visual review and acceptance do not transfer from
 the deck. `timeout_seconds` bounds work (default 300, 1–900); interruption stops
 subprocesses and cleans temporary files. Existing outputs are never overwritten.
-This is a synchronous library/CLI export, not a model operation or dashboard action.
+Encoding is synchronous and does not perform speech synthesis.
+
+
+## Narrated delivery
+
+Use `narration-settings` and `configure-narration` for store-scoped speech settings,
+separate from writing settings. Providers: `openai` (`OPENAI_API_KEY`, defaults
+`gpt-4o-mini-tts` / `marin`) and `gemini` (`GOOGLE_API_KEY` then `GEMINI_API_KEY`,
+defaults `gemini-2.5-flash-preview-tts` / `Kore`). Key presence is not verified speech
+access; Anthropic, ChatGPT and Copilot authentication do not authorize these APIs.
+Speech goes directly to the provider, without an Amplifier Agent session.
+
+`generate-narration` requires exact story/revision, a request ID and a speech grant
+(`max_requests`, `max_characters`, `timeout_seconds`; defaults 12 / 24000 / 300,
+maxima 100 / 200000 / 900). New speech also requires `--model-env`. Omitted `notes`
+reads each slide's `.notes` or `[data-speaker-notes]`; supplied `notes` is one string
+per slide and is retained as an explicit adaptation. Each must be nonempty and at
+most 4000 characters. Do not invent missing notes or silently rewrite them.
+
+Poll the returned operation with `get-operation`; cancel with `cancel-operation`.
+`get-speaker-notes`, `list-narrations`, `get-narration` and `get-narration-audio`
+provide deterministic inspection. Completed slide audio survives partial failure.
+Exact request retries do not spend again. Reuse is keyed by text and frozen speech
+settings; only changed clips require synthesis. Uncertain attempts require a new
+request ID and explicit `retry_uncertain: true`; do not retry blindly. Cancellation
+cannot reverse a provider charge already in flight. Audio is disclosed as AI-generated.
+
+Pass the completed `narration_id` to `export-video`. Default `delivery: "embedded"`
+produces MP4 with AAC audio; `delivery: "separate"` requires a new `.zip` path and
+packages silent MP4, a full aligned WAV, original slide WAVs, notes/settings/timing
+manifest and README. Both use the same retained audio and render plan, without
+new synthesis or credentials. Actual speech duration plus `pause_seconds` (default
+0.5, allowed 0–60) determines whole-frame timing. Optional `slide_seconds` must fit
+speech and pause; conflicts fail without truncating or accelerating speech.
+The original revision, audio and timing remain retained. Static video limitations
+still apply. Audio decoding is not a listening or pronunciation-quality check.
+
+The dashboard's **Narration & video** dialog provides the same settings, explicit
+notes adaptation, generation/cancellation, audio listening and two export modes.
+Its generation grant is 12 requests / 48000 characters / 300 seconds. The viewer
+needs provider-use authority for uncached speech. Exports require no new API calls.
+
+
+## Preparing narration independently of speech
+
+Use `prepare-narration` when a narrated video needs a spoken story, or when the caller
+wants a script alone. This is optional; normal presentation generation need not
+produce a voiceover. Uses the writing provider through Amplifier Agent, independently
+of configured speech provider/key. Inputs are exact story/revision, ordinary writing
+`grant`, request ID, optional `guidance`, approximate `target_seconds` and
+`base_script_id` for refinement. Optional `draft_notes` supplies current editable
+passages, including gaps, without discarding unsaved text. Native writing-provider access and model authority
+are required. The whole selected deck, notes and retained sources are disclosed to
+that provider. Background mode runs immediately; queued mode needs `run-operation`.
+
+Defaults establish audience relevance, add explanation beyond bullet recitation,
+connect the slides and end with a useful takeaway. Spoken language, supported
+examples and content-led pacing serve the purpose; a dramatic or sales structure
+is not mandatory. Presenter cues are adapted, not read aloud. No invented motives,
+experiences, benefits or image observations. User guidance steers tone, emphasis
+and length. A duration estimate at 140 words/minute is not measured audio timing.
+
+Poll the returned operation, then read result.script_id with `get-narration-script`.
+`list-narration-scripts` lists retained versions. Each has ordered passages,
+references, limitations, source revision, guidance and review. Composition and
+source-fidelity/spoken-story model review permit at most one repair and re-review
+(up to four calls within the writing grant). Failed candidates remain inspectable;
+model review is not human approval, a listening test or independent truth.
+
+`save-narration-script` retains explicit text edits without a model; edits create a
+new identity and invalidate prior review. Preparing/refining leaves slides, speaker
+notes, earlier scripts and audio intact. Pass `script_id` to `generate-narration` to
+speak its exact text; do not also pass `notes`. Synthesis and video retain the script
+identity/hash. Existing verbatim notes input remains available for finished scripts.
+No new approval ceremony is required between steps when the caller has authorized
+the full narrated export. The dashboard exposes preparation, guidance, versions,
+manual editing and synthesis separately, using these same public capabilities.
+
+
+Speech synthesis runs up to three distinct slide requests concurrently by default.
+Set `concurrency` (1–8) on `generate-narration` to change that limit. All requests
+share the same total request/character budget and operation deadline. Identical
+text and voice settings within a run share one synthesis request. Completed audio
+is retained by its actual slide number, even when earlier slides fail or finish
+later; video assembly uses slide order. One failed request does not discard or
+cancel successful work on other slides. Cancellation stops all active requests
+and prevents waiting work from starting; in-flight provider charges may still occur.
 
 
 Storyboard reliability: Anthropic and OpenAI API submissions request native strict

@@ -25,8 +25,9 @@ and validate compatibility. New Git installs resolve main.
 - Put the Python library in `src/amplifier_smart_tool_stories/`.
 - Keep the `stories` CLI thin: argument parsing and I/O call library functions.
 - Package prompts, styles and templates as resources; do not depend on a checkout.
-- Use `amplifier-agent` for model-backed execution. Keep its integration behind the
-  library boundary and off import, help and deterministic code paths.
+- Use `amplifier-agent` for story reasoning. Speech synthesis uses direct provider
+  APIs with separate bounded authority. Keep both integrations behind the library
+  boundary and off import, help and deterministic code paths.
 - Put executable checks and fixtures in `tests/`.
 
 ## Changes
