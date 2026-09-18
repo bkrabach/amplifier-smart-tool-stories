@@ -12,6 +12,10 @@ use_cases:
 platforms:
   - macos
 requires:
+  - name: mcp-host
+    purpose: Optional stdio MCP and portable MCP Apps review; install the mcp extra. No host is needed for library or CLI use.
+    optional: true
+    install: https://github.com/robotdad/amplifier-smart-tool-stories/blob/main/docs/MCP.md
   - name: model-provider-access
     purpose: Needed for generation and intelligent comment responses; retained review works without it.
     optional: true
@@ -120,8 +124,10 @@ api = Stories("/chosen/state", model_env=True, provider="anthropic", execution="
 api.grant_feedback(story_id, {"max_operations": 5, "timeout_seconds": 180}, "grant-1")
 viewer = api.start_dashboard(story_id, revision_id)
 ```
-Each user comment consumes one operation allowance when queued. Typing/saving drafts
-never spends. A grant expires after one hour by default, at most 24 hours, and limits
+Each user comment consumes one operation allowance when queued. In immediate execution,
+if model access is not enabled, Stories retains the comment as `awaiting_model_access`
+without consuming a grant or launching work that would fail; queued execution can retain
+authorized work for a later model-enabled worker. Typing/saving drafts never spends. A grant expires after one hour by default, at most 24 hours, and limits
 operations, time per operation and output tokens per call. Each operation uses at most
 five presentation model calls, or eleven for documents reviewed in batches of up to
 three pages: evidence/planning, composition, source/page review, and at most one repair
@@ -521,3 +527,31 @@ creative quality. Review receives code-computed narration counts and provisional
 spoken-time estimates, not model-estimated word counts. Printed storyboard sheets begin with a separate direction overview,
 then the panel sequence. Production requirements stay optional and concise; timing
 is a provisional narration/visual budget, not a promise of produced video duration.
+
+## Optional MCP / MCP Apps
+
+Install `amplifier-smart-tool-stories[mcp]` from this Git repository and run
+`stories-mcp --storage /explicit/store`. Add `--model-env` only with authority to
+use configured providers; generation still requires a bounded grant. Tool schemas
+and the optional `ui://stories/review` App use the same public library and state.
+Read shared drafts before continuing. Comments default to agent notes; `author=user`
+is caller-reported human submission, not authenticated identity. The portable
+adapter omits native human acceptance, login, runtime preparation and video export.
+Media/audio/export getters return scoped, bounded MCP resource chunks; export
+transfer snapshots expire when the MCP server stops. The native library/CLI remains
+available for durable file exports. No MCP sampling, Tasks or caller wake-up is
+implied. See the repository's `docs/MCP.md` for supported scope and host requirements.
+
+Portable navigation is shared library state. Read `get-review-view`, then
+`update-review-view` with its exact `expected_version`, a stable request ID and
+revision/one-based slide/comparison/anchor/panel/sections/export-format changes.
+Conflicts require rereading and reconciling; viewing never selects a direction,
+accepts content or grants work. The App follows these changes and restores them
+on reopen. Audio playback/volume, scroll, download handling and grant form drafts
+remain local presentation controls; their domain actions remain public tools.
+
+`respond` preserves the original annotation target and accepts explicit `author`.
+Library/CLI retain their user-submission default for compatibility; the portable
+MCP adapter defaults both `add_comment` and `respond` to agent notes, which never
+consume feedback authority. User attribution is a caller assertion, not proof of
+human identity.

@@ -5,6 +5,26 @@ The [installed operating guide](../src/amplifier_smart_tool_stories/SMART_TOOL.m
 is the complete CLI/library reference. The broader contracts remain the product
 requirements; this release does not claim full conformance to all of them.
 
+## Review in an MCP host
+
+The optional `[mcp]` extra provides `stories-mcp --storage /explicit/store` and a
+self-contained MCP App. See [portable review and its exact capability scope](MCP.md).
+It uses the same retained revisions, drafts, comments and bounded grants as the
+library. Opening does not start model work; `--model-env` and a grant are both
+required for generation. Native human acceptance is deliberately not exposed.
+
+Agents and people share review navigation without choosing or accepting material:
+
+```python
+view = api.get_review_view(story)
+api.update_review_view(story, expected_version=view['version'],
+    request_id='review-position-1', revision_id=revision, slide=1, panel_open=True)
+```
+
+Read the view version first and reconcile stale-version conflicts. Reuse the exact
+request ID only for an identical retry. The default `shared` view retains revision,
+one-based slide, comparison, target, panel, expanded sections and export format.
+
 ## Import a story and open review
 
 ```python
@@ -65,7 +85,10 @@ api.grant_feedback(story, {'max_operations':5, 'timeout_seconds':180}, 'review-g
 viewer = api.start_dashboard(story, revision)
 ```
 
-Submitted comments queue bounded model responses automatically. Answers and
+Submitted comments queue bounded model responses automatically when model access is
+enabled. Without it, immediate execution retains user comments as
+`awaiting_model_access` without consuming their grant or starting work that would
+fail; queued execution can retain authorized work for a later model-enabled worker. Answers and
 clarifications use at most two calls. Artifact production adds review against sources
 and rendered images, with at most one repair and fresh review: five calls for presentations. Documents review batches of up to three pages, with
 at most eleven calls including one repair.

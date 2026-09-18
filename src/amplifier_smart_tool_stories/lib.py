@@ -12,13 +12,14 @@ from pathlib import Path
 from .artifacts import digest, evidence_checked, parse_html, preview, validate_anchor
 from .errors import StoriesError, require
 from .media import MediaLibrary, bindings, select, warnings_for
+from .review_view import ReviewViewLibrary
 from .scripts import ScriptLibrary
 from .speech import NarrationLibrary
 from .store import Store, identity, now
 from .storyboard_library import StoryboardLibrary
 
 
-class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
+class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary, ReviewViewLibrary):
     def __init__(
         self,
         storage=None,
@@ -349,7 +350,7 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
         return operation["id"]
 
     def add_comment(self, story_id, revision_id, text, request_id, anchor=None, author="user"):
-        """Submit anchored feedback. Caller highlights never spend; user comments use existing feedback authority."""
+        """Submit anchored feedback. Caller highlights never spend; user comments queue only when execution can use authority."""
         require(author in {"user", "agent"}, "Author must be user or agent.")
         require(
             isinstance(text, str) and 0 < len(text.strip()) <= 12000,
@@ -376,11 +377,17 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
             grant = story["feedback_grant"]
             if author == "user":
                 if grant and grant["expires_at"] > now() and grant["used"] < grant["max_operations"]:
-                    grant["used"] += 1
-                    note["operation_id"] = self._queue(
-                        db, story, "comment", copy.deepcopy(grant), revision_id, note["id"]
-                    )
-                    note["status"] = "queued"
+                    # Queued work may be claimed later by a model-enabled worker. Immediate
+                    # execution without model access, however, is known to fail, so retain
+                    # the submission without consuming its existing grant.
+                    if self.execution == "queued" or self.model_env or self.intelligence is not None:
+                        grant["used"] += 1
+                        note["operation_id"] = self._queue(
+                            db, story, "comment", copy.deepcopy(grant), revision_id, note["id"]
+                        )
+                        note["status"] = "queued"
+                    else:
+                        note["status"] = "awaiting_model_access"
                 else:
                     note["status"] = "awaiting_authority"
             story["annotations"].append(note)
@@ -398,12 +405,12 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary):
             request_id, "add_comment", [story_id, revision_id, text, target, author], action
         )
 
-    def respond(self, story_id, annotation_id, text, request_id):
-        """Continue an annotation by submitting a user comment on the same exact target, with thread context."""
+    def respond(self, story_id, annotation_id, text, request_id, author="user"):
+        """Continue an annotation on its exact target; author=agent records a non-spending caller note."""
         story = self.get_story(story_id)
         note = next((n for n in story["annotations"] if n["id"] == annotation_id), None)
         require(note is not None, "Unknown annotation.")
-        return self.add_comment(story_id, note["revision_id"], text, request_id, note["anchor"], "user")
+        return self.add_comment(story_id, note["revision_id"], text, request_id, note["anchor"], author)
 
     def answer_question(self, operation_id, text, grant, request_id):
         """Answer a pending generation question with explicit bounded authority; retain its story and question chain."""
@@ -1006,6 +1013,8 @@ CAPABILITIES = [
     "get_revision",
     "get_preview",
     "select_revision",
+    "get_review_view",
+    "update_review_view",
     "grant_feedback",
     "add_comment",
     "respond",

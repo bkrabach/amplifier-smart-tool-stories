@@ -14,6 +14,10 @@ something worth your attention, and you can select text or an element to leave a
 comment. Stories can answer or revise directly while you keep reading. Comments
 stay outside the finished document, and you choose when to open a new version.
 
+Stories can also appear alongside a conversation in an MCP Apps host. The optional
+[portable review adapter](docs/MCP.md) shares retained revisions, comments and drafts
+with your agent; the native review workspace remains available.
+
 ## Quick start: bring your material to your agent
 
 Give your coding agent this message, replacing the example with your own brief:

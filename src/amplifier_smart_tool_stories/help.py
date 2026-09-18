@@ -7,8 +7,18 @@ from importlib.resources import files
 
 from .lib import Stories
 
+MCP_GUIDANCE = """Use one explicit retained store. Read shared drafts and revisions before mutations.
+Tool schemas expose bounded grants; --model-env authorizes environment access but
+is not a spending grant. Comments default to agent notes; author=user is only a
+caller-reported human submission. Without model access, user comments are retained
+awaiting access without consuming a grant or starting work. Native human acceptance is omitted. Media and
+exports use scoped resources/read chunks; export transfer snapshots last until
+this server stops. Closing a view does not cancel work. No MCP sampling, Tasks,
+elicitation, provider login, runtime preparation or video export is exposed."""
+
 # Examples are valid JSON inputs; retained identities must come from earlier receipts.
 VALUES = {
+    "expected_version": 0,
     "idea": "Explain a fictional team's handoff as a short visual sequence.",
     "brief": {"intent": "Explain the handoff", "assumptions": [], "open_questions": []},
     "storyboard": {
@@ -73,6 +83,16 @@ VALUES = {
 }
 
 GUIDANCE = {
+    "get_review_view": (
+        "Read shared review navigation.",
+        "Versioned focus, slide, comparison and panel state.",
+        "Provider-free; viewing is separate from choosing and acceptance.",
+    ),
+    "update_review_view": (
+        "Change shared review navigation for people and agents.",
+        "New versioned review state.",
+        "Read the version first; conflicts require reconciliation. Identical request retries are safe. One-based slides, empty comparison_revision clears comparison. Omitted fields stay unchanged. No work starts.",
+    ),
     "create_storyboard": (
         "Import a structured outline or illustrated storyboard for shared review.",
         "status, story_id, revision_id and direction_id. No direction is chosen automatically.",
@@ -246,12 +266,12 @@ GUIDANCE = {
     "add_comment": (
         "Leave a caller highlight or submit person feedback.",
         "status, annotation_id and optional operation_id.",
-        "author=agent highlights never start model work. Default author=user uses existing feedback authority, or returns awaiting_authority. anchor defaults to {kind: story}; element anchors add element, text anchors add element/start/end/quote. Discover targets with get-preview. Comments stay outside exports.",
+        "author=agent highlights never start model work. Default author=user uses existing feedback authority, or returns awaiting_authority. Without model access, immediate execution retains the user comment as awaiting_model_access without consuming its grant or starting work; queued execution may still retain authorized work for a later model-enabled worker. anchor defaults to {kind: story}; element anchors add element, text anchors add element/start/end/quote. Discover targets with get-preview. Comments stay outside exports.",
     ),
     "respond": (
         "Follow up on a clarification or existing annotation.",
         "status, new annotation_id and optional operation_id.",
-        "Uses the original target and thread context as a user comment. Existing feedback authority is required for model work; it does not restart the old operation.",
+        "Uses the original target and thread context. Default author=user conveys person feedback; explicit author=agent never spends. The MCP adapter defaults to agent. Existing feedback authority is required for user-comment model work; without model access, immediate execution retains it as awaiting_model_access without spending. It does not restart the old operation.",
     ),
     "save_draft": (
         "Retain unfinished feedback without submitting it.",
@@ -337,6 +357,12 @@ GUIDANCE = {
 
 
 FIELD_HELP = {
+    "view_id": "Shared review identity; default shared",
+    "expected_version": "Exact version from get-review-view; stale changes conflict",
+    "comparison_revision": "Exact comparison revision, or empty string to clear",
+    "panel_open": "Whether the shared review panel is visible",
+    "export_format": "Retained export format choice: html, zip, pdf or docx",
+    "sections": "Expanded review sections: sources, grant, export, work",
     "idea": "Rough creative intent and explicitly supplied conversation context",
     "storyboard": "name, approach, tradeoff and panels; each panel has id, title, action, visual, asset_id, narration, notes, evidence_ids",
     "brief": "Shared intent text plus assumptions and open_questions text lists",

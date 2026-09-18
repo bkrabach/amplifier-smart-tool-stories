@@ -79,9 +79,9 @@ formats; public help and manifests describe only supported, validated behavior.
 - Supported platforms and independently verified provider authentication paths —
   the initial adapter supports OpenAI, ChatGPT, Copilot, Anthropic and Gemini.
   amplifier-agent tracks main; the development lock records the tested revision.
-- MCP, remote services or additional adapters beyond the built-in dashboard —
-  promote when an actual consumer requires one. Dashboard behavior is defined in
-  its contract; concrete implementation remains open.
+- Remote services and adapters beyond the optional [MCP review adapter](mcp-app.v1.md).
+  The implemented stdio/MCP Apps subset preserves public library semantics;
+  unsupported features and unauthenticated attribution remain explicit.
 - Autonomous source connectors — promote when a source-specific permission and
   failure contract is proposed; this version does not require those connectors.
 

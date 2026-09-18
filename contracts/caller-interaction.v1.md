@@ -235,3 +235,9 @@ verified decimal results. Model review of coverage and interpretation remains fa
 
 `accept_revision` records explicitly conveyed person acceptance of a revision/hash
 without changing selection, review results, artifact bytes or future authority.
+
+`respond` preserves the original annotation target and accepts explicit `author`.
+Library/CLI retain their user-submission default for compatibility; the portable
+MCP adapter defaults both `add_comment` and `respond` to agent notes, which never
+consume feedback authority. User attribution is a caller assertion, not proof of
+human identity.
