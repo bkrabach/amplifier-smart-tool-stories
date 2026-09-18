@@ -350,7 +350,7 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary, 
         return operation["id"]
 
     def add_comment(self, story_id, revision_id, text, request_id, anchor=None, author="user"):
-        """Submit anchored feedback. Caller highlights never spend; user comments use existing feedback authority."""
+        """Submit anchored feedback. Caller highlights never spend; user comments queue only when execution can use authority."""
         require(author in {"user", "agent"}, "Author must be user or agent.")
         require(
             isinstance(text, str) and 0 < len(text.strip()) <= 12000,
@@ -377,11 +377,17 @@ class Stories(StoryboardLibrary, MediaLibrary, NarrationLibrary, ScriptLibrary, 
             grant = story["feedback_grant"]
             if author == "user":
                 if grant and grant["expires_at"] > now() and grant["used"] < grant["max_operations"]:
-                    grant["used"] += 1
-                    note["operation_id"] = self._queue(
-                        db, story, "comment", copy.deepcopy(grant), revision_id, note["id"]
-                    )
-                    note["status"] = "queued"
+                    # Queued work may be claimed later by a model-enabled worker. Immediate
+                    # execution without model access, however, is known to fail, so retain
+                    # the submission without consuming its existing grant.
+                    if self.execution == "queued" or self.model_env or self.intelligence is not None:
+                        grant["used"] += 1
+                        note["operation_id"] = self._queue(
+                            db, story, "comment", copy.deepcopy(grant), revision_id, note["id"]
+                        )
+                        note["status"] = "queued"
+                    else:
+                        note["status"] = "awaiting_model_access"
                 else:
                     note["status"] = "awaiting_authority"
             story["annotations"].append(note)

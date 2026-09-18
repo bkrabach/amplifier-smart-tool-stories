@@ -21,6 +21,7 @@ let story = null,
   opening = null;
 const urls = new Set(),
   pending = new Map(),
+  pendingAuthorizations = new Map(),
   notice = (text, error = false) => {
     $("notice").textContent = text;
     $("notice").className = error ? "error" : "success";
@@ -562,28 +563,51 @@ for (const [id, delta] of [
         slide: Math.max(1, Math.min(totalSlides, slide + 1 + delta)),
       }),
     );
-$("authorize").onclick = () =>
-  run(async () => {
-    const grant = {
-      max_operations: Number($("operations").value),
-      timeout_seconds: Number($("seconds").value),
-      max_output_tokens: Number($("tokens").value),
-    };
-    for (const [key, min, max] of [
-      ["max_operations", 1, 100],
-      ["timeout_seconds", 1, 900],
-      ["max_output_tokens", 128, 24000],
-    ])
-      if (!Number.isInteger(grant[key]) || grant[key] < min || grant[key] > max)
-        throw Error(`${key.replaceAll("_", " ")} must be ${min}–${max}.`);
-    await call("grant_feedback", {
-      story_id: story.id,
-      grant,
-      request_id: requestId(),
-    });
+function enteredGrant() {
+  const grant = {
+    max_operations: Number($("operations").value),
+    timeout_seconds: Number($("seconds").value),
+    max_output_tokens: Number($("tokens").value),
+  };
+  for (const [key, min, max] of [
+    ["max_operations", 1, 100],
+    ["timeout_seconds", 1, 900],
+    ["max_output_tokens", 128, 24000],
+  ])
+    if (!Number.isInteger(grant[key]) || grant[key] < min || grant[key] > max)
+      throw Error(`${key.replaceAll("_", " ")} must be ${min}–${max}.`);
+  return grant;
+}
+async function authorizeFeedback(replace = false) {
+  const grant = enteredGrant(),
+    sid = story.id,
+    prior = pendingAuthorizations.get(sid);
+  if (prior && !replace && JSON.stringify(prior.grant) !== JSON.stringify(grant))
+    throw Error(
+      "The previous authorization may have been accepted. Restore its values to retry it, or choose Authorize new feedback to explicitly replace it.",
+    );
+  const request =
+    prior && !replace
+      ? prior
+      : Object.freeze({
+          story_id: sid,
+          grant: Object.freeze({ ...grant }),
+          request_id: requestId(),
+        });
+  pendingAuthorizations.set(sid, request);
+  const buttons = [$("authorize"), $("authorizeNew")];
+  buttons.forEach((button) => (button.disabled = true));
+  try {
+    await call("grant_feedback", request);
+    pendingAuthorizations.delete(sid);
     await refresh();
     notice("Finite feedback allowance recorded; no work started.");
-  });
+  } finally {
+    buttons.forEach((button) => (button.disabled = false));
+  }
+}
+$("authorize").onclick = () => run(() => authorizeFeedback());
+$("authorizeNew").onclick = () => run(() => authorizeFeedback(true));
 $("export").onclick = () =>
   run(async () => {
     const sid = story.id,
@@ -667,7 +691,8 @@ await run(async () => {
     arguments: {},
   });
   $("provider").textContent = JSON.stringify(status.structuredContent, null, 2);
-  $("authorize").disabled = !status.structuredContent?.model_access;
+  for (const id of ["authorize", "authorizeNew"])
+    $(id).disabled = !status.structuredContent?.model_access;
   await list();
   if (!story)
     notice("Choose retained work, or ask your agent to create a story.");

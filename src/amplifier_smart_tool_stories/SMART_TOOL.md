@@ -124,8 +124,10 @@ api = Stories("/chosen/state", model_env=True, provider="anthropic", execution="
 api.grant_feedback(story_id, {"max_operations": 5, "timeout_seconds": 180}, "grant-1")
 viewer = api.start_dashboard(story_id, revision_id)
 ```
-Each user comment consumes one operation allowance when queued. Typing/saving drafts
-never spends. A grant expires after one hour by default, at most 24 hours, and limits
+Each user comment consumes one operation allowance when queued. In immediate execution,
+if model access is not enabled, Stories retains the comment as `awaiting_model_access`
+without consuming a grant or launching work that would fail; queued execution can retain
+authorized work for a later model-enabled worker. Typing/saving drafts never spends. A grant expires after one hour by default, at most 24 hours, and limits
 operations, time per operation and output tokens per call. Each operation uses at most
 five presentation model calls, or eleven for documents reviewed in batches of up to
 three pages: evidence/planning, composition, source/page review, and at most one repair

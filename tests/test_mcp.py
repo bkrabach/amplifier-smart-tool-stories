@@ -286,30 +286,100 @@ def test_export_resources_reuse_one_immutable_preparation(tmp_path, monkeypatch)
     anyio.run(run)
 
 
-def test_existing_feedback_grant_cannot_bypass_model_env(tmp_path, monkeypatch):
+def test_user_comments_preserve_grants_when_mcp_cannot_execute_them(tmp_path):
     async def run():
         ids = fixture.seed(tmp_path)
         api = Stories(tmp_path, execution="in_process")
         api.grant_feedback(ids["story_id"], {"max_operations": 2}, "feedback-permission")
-        called = []
-        import amplifier_smart_tool_stories.intelligence as intelligence
-
-        monkeypatch.setattr(intelligence, "execute", lambda *args: called.append(args))
         async with Client(create_server(api)) as client:
-            receipt = value(
+            comment = {
+                "story_id": ids["story_id"],
+                "revision_id": ids["revision_id"],
+                "text": "Clarify the handoff",
+                "request_id": "feedback",
+                "author": "user",
+            }
+            receipt = value(await client.call_tool("stories_add_comment", comment))
+            assert receipt["status"] == "awaiting_model_access" and receipt["operation_id"] is None
+            assert value(await client.call_tool("stories_add_comment", comment)) == receipt
+            parent = value(
                 await client.call_tool(
                     "stories_add_comment",
                     {
                         "story_id": ids["story_id"],
                         "revision_id": ids["revision_id"],
-                        "text": "Clarify the handoff",
-                        "request_id": "feedback",
-                        "author": "user",
+                        "text": "Agent clarification",
+                        "request_id": "agent-note",
                     },
                 )
             )
-            operation = api.get_operation(receipt["operation_id"])
-            assert operation["state"] == "failed" and "model_access_required" in str(operation)
-            assert not called
+            response = {
+                "story_id": ids["story_id"],
+                "annotation_id": parent["annotation_id"],
+                "text": "User response",
+                "request_id": "response",
+                "author": "user",
+            }
+            reply = value(await client.call_tool("stories_respond", response))
+            assert reply["status"] == "awaiting_model_access" and reply["operation_id"] is None
+            assert value(await client.call_tool("stories_respond", response)) == reply
+            assert api.get_story(ids["story_id"])["feedback_grant"]["used"] == 0
+
+    anyio.run(run)
+
+
+def test_mcp_user_comments_consume_grants_only_with_injected_execution(tmp_path):
+    async def run():
+        ids = fixture.seed(tmp_path)
+        calls = []
+
+        def intelligence(story, operation):
+            calls.append(operation["id"])
+            return {
+                "action": "answer",
+                "message": "Retained fixture response",
+                "changes": {"summary": "", "material_changes": [], "omissions": [], "assumptions": []},
+                "calculations": [],
+            }
+
+        api = Stories(tmp_path, execution="in_process", intelligence=intelligence)
+        api.grant_feedback(ids["story_id"], {"max_operations": 2}, "feedback-permission")
+        async with Client(create_server(api)) as client:
+            comment = {
+                "story_id": ids["story_id"],
+                "revision_id": ids["revision_id"],
+                "text": "Clarify the handoff",
+                "request_id": "feedback",
+                "author": "user",
+            }
+            receipt = value(await client.call_tool("stories_add_comment", comment))
+            assert receipt["status"] == "queued"
+            assert api.get_operation(receipt["operation_id"])["state"] == "succeeded"
+            assert value(await client.call_tool("stories_add_comment", comment)) == receipt
+
+            parent = value(
+                await client.call_tool(
+                    "stories_add_comment",
+                    {
+                        "story_id": ids["story_id"],
+                        "revision_id": ids["revision_id"],
+                        "text": "Agent clarification",
+                        "request_id": "agent-note",
+                    },
+                )
+            )
+            response = {
+                "story_id": ids["story_id"],
+                "annotation_id": parent["annotation_id"],
+                "text": "User response",
+                "request_id": "response",
+                "author": "user",
+            }
+            reply = value(await client.call_tool("stories_respond", response))
+            assert reply["status"] == "queued"
+            assert api.get_operation(reply["operation_id"])["state"] == "succeeded"
+            assert value(await client.call_tool("stories_respond", response)) == reply
+            assert len(calls) == 2
+            assert api.get_story(ids["story_id"])["feedback_grant"]["used"] == 2
 
     anyio.run(run)

@@ -10,7 +10,8 @@ from .lib import Stories
 MCP_GUIDANCE = """Use one explicit retained store. Read shared drafts and revisions before mutations.
 Tool schemas expose bounded grants; --model-env authorizes environment access but
 is not a spending grant. Comments default to agent notes; author=user is only a
-caller-reported human submission. Native human acceptance is omitted. Media and
+caller-reported human submission. Without model access, user comments are retained
+awaiting access without consuming a grant or starting work. Native human acceptance is omitted. Media and
 exports use scoped resources/read chunks; export transfer snapshots last until
 this server stops. Closing a view does not cancel work. No MCP sampling, Tasks,
 elicitation, provider login, runtime preparation or video export is exposed."""
@@ -265,12 +266,12 @@ GUIDANCE = {
     "add_comment": (
         "Leave a caller highlight or submit person feedback.",
         "status, annotation_id and optional operation_id.",
-        "author=agent highlights never start model work. Default author=user uses existing feedback authority, or returns awaiting_authority. anchor defaults to {kind: story}; element anchors add element, text anchors add element/start/end/quote. Discover targets with get-preview. Comments stay outside exports.",
+        "author=agent highlights never start model work. Default author=user uses existing feedback authority, or returns awaiting_authority. Without model access, immediate execution retains the user comment as awaiting_model_access without consuming its grant or starting work; queued execution may still retain authorized work for a later model-enabled worker. anchor defaults to {kind: story}; element anchors add element, text anchors add element/start/end/quote. Discover targets with get-preview. Comments stay outside exports.",
     ),
     "respond": (
         "Follow up on a clarification or existing annotation.",
         "status, new annotation_id and optional operation_id.",
-        "Uses the original target and thread context. Default author=user conveys person feedback; explicit author=agent never spends. The MCP adapter defaults to agent. Existing feedback authority is required for user-comment model work; it does not restart the old operation.",
+        "Uses the original target and thread context. Default author=user conveys person feedback; explicit author=agent never spends. The MCP adapter defaults to agent. Existing feedback authority is required for user-comment model work; without model access, immediate execution retains it as awaiting_model_access without spending. It does not restart the old operation.",
     ),
     "save_draft": (
         "Retain unfinished feedback without submitting it.",

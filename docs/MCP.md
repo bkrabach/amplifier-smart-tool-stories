@@ -39,10 +39,21 @@ Observing state or receiving a submission receipt does not wake a calling agent.
 The App presents the actual retained, sanitized preview. A second preview can compare
 another revision without selecting it. “Choose revision/direction” is an explicit
 library action, separate from artifact acceptance or generation. Submitted comments
-may consume an existing finite feedback grant; without one they await authority.
+may consume an existing finite feedback grant when model access is enabled; without
+one they await authority. With no `--model-env`, user submissions are still retained,
+but await model access without consuming a grant or starting a worker. Exact retries
+retain the same receipt, even after model access is enabled. To request execution,
+enable model access, confirm a valid allowance, then submit an explicit follow-up
+with a new request ID; reopening alone never starts the waiting comment.
 Caller notes default to `author=agent` and never initiate model work. `author=user`
 means the caller reports an actual human submission. MCP does **not** authenticate a
 person or verify this claim. The portable adapter omits native human acceptance.
+
+After an uncertain authorization response, the open App retains the original grant
+and request ID for retry. Restore its input values to retry it, or use **Authorize
+new feedback** to deliberately replace the allowance. Pending authorization IDs
+are local to that App session; after a reload, inspect retained authority before
+authorizing again.
 
 The reviewer may select text or an identified element in the preview to target a
 comment. Saved drafts survive reconnects. Incoming changes update shared metadata

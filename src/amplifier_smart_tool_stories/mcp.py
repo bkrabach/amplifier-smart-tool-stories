@@ -258,7 +258,7 @@ def create_server(client):
         invoke.__signature__ = signature.replace(parameters=parameters, return_annotation=CallToolResult)
         description = inspect.getdoc(method) or name.replace("_", " ")
         if name in {"add_comment", "respond"}:
-            description += " Author defaults to agent (a note, no spending). Use author=user only to convey an actual user submission, which may consume existing feedback authority. Attribution is caller-reported, not authenticated by MCP."
+            description += " Author defaults to agent (a note, no spending). Use author=user only to convey an actual user submission, which may consume existing feedback authority when model execution is available. Provider-free submission is retained awaiting model access without consuming that authority or starting work. Attribution is caller-reported, not authenticated by MCP."
         if name in {"get_media", "get_narration_audio", "get_export"}:
             description += (
                 " Returns an opaque MCP resource URI; read successive 512 KiB chunks through resources/read."

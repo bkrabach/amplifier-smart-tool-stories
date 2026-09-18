@@ -13,7 +13,9 @@ contracts. Its supported scope is recorded in [the adapter guide](../docs/MCP.md
 3. Catalog/schema/UI metadata describes capability, not installation or execution
    authority. An App is optional; every exposed domain action is model- and App-visible.
 4. Requests preserve library idempotency, revision targets, draft ordering and grants.
-   Drafts remain distinguishable from submissions. Reads do not dispatch work.
+   Drafts remain distinguishable from submissions. Provider-free user-comment
+   submissions are retained awaiting model access without consuming a grant or
+   dispatching guaranteed-failed work. Reads do not dispatch work.
 5. Author labels are caller-reported. The protocol does not authenticate human intent;
    native human acceptance is outside this adapter. Direction choice does not imply
    acceptance, generation permission or publication.

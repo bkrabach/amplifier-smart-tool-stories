@@ -85,7 +85,10 @@ api.grant_feedback(story, {'max_operations':5, 'timeout_seconds':180}, 'review-g
 viewer = api.start_dashboard(story, revision)
 ```
 
-Submitted comments queue bounded model responses automatically. Answers and
+Submitted comments queue bounded model responses automatically when model access is
+enabled. Without it, immediate execution retains user comments as
+`awaiting_model_access` without consuming their grant or starting work that would
+fail; queued execution can retain authorized work for a later model-enabled worker. Answers and
 clarifications use at most two calls. Artifact production adds review against sources
 and rendered images, with at most one repair and fresh review: five calls for presentations. Documents review batches of up to three pages, with
 at most eleven calls including one repair.

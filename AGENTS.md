@@ -59,6 +59,8 @@ and validate compatibility. New Git installs resolve main.
   human acceptance distinct from semantic truth and model review. New revisions
   do not inherit acceptance. Continuations retain question context and require
   explicit bounded authority; retries must not repeat work.
+- For MCP review changes, test lost acknowledgements after grant consumption and
+  provider-disabled user submissions; neither path may silently replenish or burn allowance.
 
 ## Validation and delivery
 

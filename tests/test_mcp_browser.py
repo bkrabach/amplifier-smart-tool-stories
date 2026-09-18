@@ -39,6 +39,7 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
     async def run():
         ids = fixture.seed(tmp_path)
         api = Stories(tmp_path)
+        api.model_env = True
         deck = api.create_story(
             "Portable slide navigation",
             '<html><body><section class="slide"><h1>First · Café — 日本語 🧭</h1><img src="asset:'
@@ -51,19 +52,27 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
         async with Client(create_server(api)) as client, async_playwright() as pw:
             browser = await pw.chromium.launch()
             page = await browser.new_page(viewport={"width": 1100, "height": 900})
-            errors, calls = [], []
+            errors, calls, authorization_attempts = [], [], []
             delays = {}
+            lose_authorization_ack = True
             page.on("pageerror", lambda error: errors.append(str(error)))
 
             async def tool(args):
+                nonlocal lose_authorization_ack
                 calls.append(args["name"])
                 if args["name"] in delays:
                     started, release = delays[args["name"]]
                     started.set()
                     await release.wait()
-                return (await client.call_tool(args["name"], args.get("arguments", {}))).model_dump(
+                result = (await client.call_tool(args["name"], args.get("arguments", {}))).model_dump(
                     by_alias=True, exclude_none=True
                 )
+                if args["name"] == "stories_grant_feedback":
+                    authorization_attempts.append(args["arguments"])
+                    if lose_authorization_ack:
+                        lose_authorization_ack = False
+                        raise RuntimeError("Authorization acknowledgement was lost")
+                return result
 
             async def read(args):
                 return (await client.read_resource(args["uri"])).model_dump(by_alias=True, exclude_none=True)
@@ -82,6 +91,44 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
             await expect(frame.locator("#notice")).to_contain_text("Ready", timeout=15000)
             await frame.locator("#revisions").select_option(ids["revision_id"])
             await expect(frame.locator("#preview")).to_be_visible()
+            await frame.get_by_role("button", name="Review", exact=True).click()
+            await frame.locator("#grant summary").click()
+            await frame.locator("#operations").fill("1")
+            await frame.get_by_role("button", name="Authorize feedback", exact=True).click()
+            await expect(frame.locator("#notice")).to_contain_text("acknowledgement was lost")
+            assert len(authorization_attempts) == 1
+            consumed = api.add_comment(
+                ids["story_id"],
+                ids["revision_id"],
+                "Another reviewer submitted feedback",
+                "consume-lost-grant",
+            )
+            assert consumed["status"] == "queued"
+            assert api.get_story(ids["story_id"])["feedback_grant"]["used"] == 1
+            # Changed values cannot silently replace an uncertain authorization.
+            await frame.locator("#operations").fill("2")
+            await frame.get_by_role("button", name="Authorize feedback", exact=True).click()
+            await expect(frame.locator("#notice")).to_contain_text(
+                "previous authorization may have been accepted"
+            )
+            assert len(authorization_attempts) == 1
+            await frame.locator("#operations").fill("1")
+            await frame.get_by_role("button", name="Authorize feedback", exact=True).click()
+            await expect(frame.locator("#notice")).to_have_text(
+                "Finite feedback allowance recorded; no work started."
+            )
+            assert authorization_attempts[1] == authorization_attempts[0]
+            assert api.get_story(ids["story_id"])["feedback_grant"]["used"] == 1
+            # A distinct control makes replacing a grant a new, explicit intent.
+            await frame.locator("#operations").fill("2")
+            await frame.get_by_role("button", name="Authorize new feedback", exact=True).click()
+            await expect(frame.locator("#notice")).to_have_text(
+                "Finite feedback allowance recorded; no work started."
+            )
+            assert (
+                authorization_attempts[2]["request_id"] != authorization_attempts[0]["request_id"]
+                and authorization_attempts[2]["grant"]["max_operations"] == 2
+            )
             artifact = frame.frame_locator("#preview")
             await expect(artifact.locator("img").first).to_be_visible()
             await expect(artifact.locator("img").first).to_have_js_property("naturalWidth", 360)
@@ -113,9 +160,9 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
             await expect(frame.locator("#notice")).to_contain_text("Comment recorded")
             notes = api.get_story(ids["story_id"])["annotations"]
             assert (
-                len(notes) == 1
-                and notes[0]["status"] == "awaiting_authority"
-                and notes[0]["revision_id"] == ids["revision_id"]
+                len(notes) == 2
+                and notes[-1]["status"] == "queued"
+                and notes[-1]["revision_id"] == ids["revision_id"]
             )
             await expect(frame.locator("#feedback")).to_have_value("A newer unfinished thought")
             await expect(frame.locator("#saved")).to_contain_text("Draft saved")
