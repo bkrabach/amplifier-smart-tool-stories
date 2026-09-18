@@ -2,7 +2,7 @@
 
 **Turn source material into stories people can use.**
 
-![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.png)
+![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.jpg)
 
 Stories helps you and your agent turn notes, evidence and existing writing into
 presentations and documents. Describe who you are writing for and what they need
