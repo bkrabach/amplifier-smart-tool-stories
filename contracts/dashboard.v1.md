@@ -2,8 +2,6 @@
 
 **Who builds against this:** People reviewing stories, calling agents, and authors
 of the built-in dashboard or host presentation adapters.
-HTML presentations and structured document review are implemented; see [current support and limits](../docs/USAGE.md).
-The full contract remains a target, not a blanket conformance claim.
 
 ## What it looks like
 
@@ -32,6 +30,10 @@ Give the person and calling agent a shared place to review and continue work.
 The dashboard is an intended product capability, not a requirement for using the
 tool. It exposes library-owned behavior rather than introducing a second workflow
 or requiring a full document, spreadsheet or slide editor.
+
+Media playback, asset isolation and export choices are specified in the
+[media and delivery contract](media-delivery.v1.md). Static preview support does not
+establish playback support.
 
 ## Core (the teeth)
 
@@ -86,7 +88,6 @@ or requiring a full document, spreadsheet or slide editor.
    supported. Tests that spend tokens are labeled; generation never unexpectedly
    launches authentication. Credentials and session access secrets do not enter
    generated artifacts, story records or ordinary browser settings storage.
-   The implemented settings scope is the current library instance/viewer process.
    Applying a provider also applies to subsequently submitted authorized feedback,
    without extending its grant or rerouting existing operations. Native sign-in,
    runtime preparation, discovery and testing are explicit background actions; the
@@ -206,9 +207,7 @@ Proposed checks only; these do not establish current support:
   in-place preservation is impossible, leave the reviewed version visible until
   the person chooses to switch. Test changed and removed annotation targets.
 
-Presentation and document review have library/HTTP checks and inspected browser scenarios.
-Spreadsheet review and faithful PowerPoint output remain deferred. HTTP success alone
-does not establish usable review.
+HTTP success alone does not establish usable review.
 
 ## What v1 deliberately does NOT freeze
 

@@ -95,5 +95,4 @@ Report skips as skips, never as passes.
 - Clause 8: output, process, dependency and repository snapshots show no unrequested
   changes, publication, service startup or overwrites.
 
-Executable checks cover presentations, documents, providers and shared review; see `tests/` and current usage limits.
 Missing evidence is not a pass.

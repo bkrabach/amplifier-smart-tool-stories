@@ -14,6 +14,8 @@ public writing, executive communication, case studies, community stories, data
 presentations and adaptation are parts of one storytelling capability. Presentations,
 documents and data-backed outputs serve different audiences; the product is not
 defined by a single rendering format.
+Stories brings together writing, images, and video to create communication people
+can read, present, or watch.
 
 Stories is a Smart Tool: a reusable library with a thin command-line interface and
 its own model-backed execution. Its callers use `stories` or import its Python

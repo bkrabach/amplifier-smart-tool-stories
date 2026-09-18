@@ -2,8 +2,6 @@
 
 **Who builds against this:** Maintainers implementing Stories' library, embedded
 intelligence, source access, artifact production and review mechanisms.
-This is a behavioral draft. HTML presentations and structured documents are implemented; [usage and limits](../docs/USAGE.md)
-distinguish implemented behavior from the broader target.
 
 ## What it looks like
 
@@ -29,6 +27,9 @@ Make the public [caller-interaction](caller-interaction.v1.md),
 enforceable without freezing an internal tool catalog or adopting a bundle's host
 assumptions. Internal tools are implementation interfaces, not automatically public
 commands. Externally useful domain capabilities remain library-accessible.
+
+The [media and delivery contract](media-delivery.v1.md) extends these
+obligations to retained assets, rendering budgets, packaging and timed exports.
 
 ## Core (the teeth)
 
@@ -121,8 +122,6 @@ These are proposed contract checks, not work items or claims of conformance:
 - Provider-free deterministic paths work without runtime initialization; failures
   clean up owned temporary resources and preserve committed and caller-owned data.
 
-Library/HTTP, provider, document, accountability and licensed bundle fixture checks exist in `tests/`.
-These do not establish the entire contract or independent story-quality review.
 Scripted models can test enforcement and failure paths; they cannot establish
 story quality. Source fidelity and rendered usability need independently reviewed
 examples as required by the storytelling contract.

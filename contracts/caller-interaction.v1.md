@@ -2,8 +2,6 @@
 
 **Who builds against this:** Calling agents, Python applications, CLI adapters,
 and people creating and revising stories through them.
-This is a behavioral draft. HTML presentations and structured documents are implemented; [usage and limits](../docs/USAGE.md)
-distinguish implemented behavior from the broader target.
 
 ## What it looks like
 
@@ -33,6 +31,9 @@ through the public library and CLI. This contract extends the
 by the [storytelling contract](storytelling.v1.md). Internal execution obligations
 live in [internal execution](internal-execution.v1.md). The built-in review workspace
 and its lifecycle are defined in the [dashboard contract](dashboard.v1.md).
+
+Supplied media, asset choices and portable delivery extend this boundary under the
+[media and delivery contract](media-delivery.v1.md).
 
 ## Core (the teeth)
 
@@ -161,8 +162,6 @@ These are proposed contract checks, not work items or claims of conformance:
   by existing authority; the caller later retrieves the comment and actual outcome.
   Re-reading annotations does not execute them or imply human approval.
 
-Library/HTTP, provider, document, accountability and licensed bundle fixture checks exist in `tests/`.
-These do not establish the entire contract or independent story-quality review.
 These checks supplement the invocation and storytelling checks, not replace them.
 
 ## What v1 deliberately does NOT freeze

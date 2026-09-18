@@ -25,6 +25,9 @@ request and revise that result. The
 [internal execution contract](internal-execution.v1.md) defines how production,
 evidence and checks remain tied to the submitted artifact.
 
+The [media and delivery contract](media-delivery.v1.md) applies these
+requirements to images, clips, speaker notes and narrated presentation exports.
+
 ## Core (the teeth)
 
 1. **A request describes the communication goal and audience.** Stories accepts
@@ -79,6 +82,5 @@ upstream Smart Tools conformance kit rather than describing what that kit proves
 - Clause 6: omitted checks remain visibly unperformed in the result.
 - Clause 8: advertised capabilities have matching accepted scenario evidence.
 
-Presentation/document generation has structural, reference and model-rendered review checks, but no complete independently approved semantic-quality oracle.
 Source-fidelity review needs recorded reviewer judgments; layout needs rendered
 evidence. Neither is replaced by schema checks or a model grading its own output.
