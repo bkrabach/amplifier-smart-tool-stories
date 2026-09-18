@@ -316,3 +316,59 @@ Presentation HTML and ZIP exports include standalone slide navigation when the
 revision has no scripts: previous/next buttons, arrow and Page Up/Down keys,
 Home/End, and viewport scaling. Imported scripted decks retain their own controls.
 Structured document exports remain scrolling documents. No Stories service is needed.
+
+## Storyboards
+
+Start with `stories generate-storyboard --help`. Ordinary creation develops one
+sequence; `explore=true` is reserved for a user's request to compare alternatives.
+The same shared expertise handles different audiences and media without choosing a
+mandatory technical-demo or marketing mode. Sources may be empty for creative work.
+Generation uses the configured provider, a shared deadline, and at most 12 model
+calls including evidence planning, candidate review and one repair per candidate.
+
+A storyboard has `name`, `approach`, `tradeoff` and 1–8 `panels`. Every panel supplies
+`id`, `title`, `action`, `visual`, `asset_id`, `narration`, `notes`, `evidence_ids`.
+Optional text is an empty string, unused citations an empty list. `asset_id` refers
+to a retained still image; `visual` alone describes a planned visual. `outline` and
+`mixed` permit missing images; `illustrated` requires an image on every panel.
+This operation does not generate new images. Use explicit fictional labeling and
+supply evidence for factual claims.
+
+`create-storyboard` imports structure. `revise-storyboard` applies an explicit edit,
+optionally attaches different assets or creates `new_direction=true`. Panel IDs
+survive reordering. A direction has its own immutable revision history; a new revision
+does not inherit semantic checks or acceptance. Old-head edits must explicitly branch.
+
+The dashboard compares retained versions of all three artifact kinds. Focus & comment
+opens one without choosing. Continue with this direction records storyboard selection
+through `select-direction`; acceptance remains separate. `get-comparison` exposes the
+same previews to headless callers. Document/presentation alternative generation is
+not provided. Background revisions do not replace the version being read.
+
+`update-storyboard-brief` records corrected common intent and supersedes existing
+directions. It neither generates nor spends. Revise a chosen base through authorized
+comments to apply the corrected brief, retaining sibling histories. Operations started
+before a brief correction cannot commit afterward. `answer-question` retains the
+requested direction count and original question context for initial clarification.
+
+A generation can finish `partial`; inspect the completed revision IDs and retained
+candidate failures, then request new work explicitly. Do not mistake one available
+direction for a complete requested comparison. ZIP delivery preserves structured
+content in `storyboard.json` and exact assets alongside HTML; HTML alone is review-only.
+No finished video, PDF or Word storyboard export is advertised. Human review of
+narrative usefulness and audience comprehension remains necessary.
+
+### Optional production requirements
+
+Panels may include `production_requirements`: up to four short strings (500 characters
+each) describing the assets or work needed, their communication purpose and relevant
+constraints. Omit the field or use `[]` for ordinary outlines. Request these requirements
+when preparing a portable handoff. They are included in review HTML and structured ZIP
+exports; there are no statuses, assignees, dependency tracking or required return to
+Stories. Tool selection and execution remain with the caller. Requirements describe
+what to produce, not a claim that footage, narration or animation already exists.
+
+Storyboard execution may correct one malformed candidate submission within the same
+shared call and time limits. Schema-declared JSON containers returned as encoded text
+are decoded before validation; invalid content is never committed merely because it
+can be parsed.

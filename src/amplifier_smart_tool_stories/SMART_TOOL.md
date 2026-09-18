@@ -340,3 +340,70 @@ Presentation HTML and ZIP exports include standalone slide navigation when the
 revision has no scripts: previous/next buttons, arrow and Page Up/Down keys,
 Home/End, and viewport scaling. Imported scripted decks retain their own controls.
 Structured document exports remain scrolling documents. No Stories service is needed.
+
+## Storyboards and user-directed comparison
+
+`generate-storyboard` develops one direction from `title`, `idea`, `audience`, a
+finite `grant` and `request_id`. Optional `sources` may be empty for explicitly
+creative work. Do not turn uncertainty into automatic alternatives: set `explore`
+to true only when the person asks to explore or compare approaches. Two directions
+then share one deadline and at most 12 model calls, with one repair per candidate.
+The configured Amplifier Agent provider receives supplied context and rendered
+review images. No new image-generation provider is invoked by storyboard work.
+
+Use `fidelity`: `outline` (default), `mixed`, or `illustrated`. Panels can reference
+supplied retained still images through `asset_id`; visual descriptions with an empty
+asset ID remain visibly planned. Illustrated delivery requires images for every
+panel. Missing images may lead to clarification or explicit failure, never fabricated
+asset IDs. Image generation across formats is still a separate planned capability.
+
+The structured `storyboard` used by `create-storyboard` and `revise-storyboard` is:
+
+```json
+{"name":"Follow the request","approach":"A concrete journey","tradeoff":"Less system detail","panels":[{"id":"arrival","title":"A request arrives","action":"A fictional team receives a request.","visual":"Sketch of a request card","asset_id":"","narration":"","notes":"","evidence_ids":[]}]}
+```
+
+There are 1–8 panels per direction. Keep IDs stable when reordering or revising.
+`create-storyboard` imports this structure without a model. `revise-storyboard`
+retains explicit edits and optional replacement `asset_ids`; `new_direction=true`
+creates an explicitly requested alternative from the identified base. Ordinary edits
+require the latest revision of that direction; old revisions are preserved.
+
+`get-comparison` reads one or two `revision_ids` in the same story, or the latest
+heads by default. It works with storyboard, document and presentation previews,
+without implying matching page counts. The dashboard's Compare action supports
+side-by-side inspection and Focus & comment; neither chooses a direction. Only
+`select-direction` records a choice. Selection is not acceptance or model authority.
+Generating alternative documents or presentations remains deferred.
+
+Read `get-operation`: initial questions use `answer-question` with fresh bounded
+authority; comments use the existing feedback grant. `partial` means some requested
+directions failed. Inspect `result.revision_ids`, `failures` and `review_attempts`;
+failed candidate submissions are retained for diagnosis. The CLI exits nonzero for
+partial execution. Never retry an acknowledged request to restart spending.
+
+`update-storyboard-brief` accepts `brief` with `intent`, `assumptions` and
+`open_questions`; it retains prior briefs and marks old directions superseded without
+generation. Comment-driven revision can apply the new brief under existing authority;
+other directions remain superseded. In-flight old-brief work cannot commit.
+
+Storyboard HTML is a review-only export. ZIP includes `index.html`, editable
+`storyboard.json`, a delivery manifest and exact referenced assets. Planned images
+remain planned; required assets are verified. Storyboards do not export finished
+video, animation, speech, PDF or Word. Model review is not human acceptance, proof
+of meaningful alternatives, or evidence that an audience understood the sequence.
+
+### Optional production requirements
+
+Panels may include `production_requirements`: up to four short strings (500 characters
+each) describing the assets or work needed, their communication purpose and relevant
+constraints. Omit the field or use `[]` for ordinary outlines. Request these requirements
+when preparing a portable handoff. They are included in review HTML and structured ZIP
+exports; there are no statuses, assignees, dependency tracking or required return to
+Stories. Tool selection and execution remain with the caller. Requirements describe
+what to produce, not a claim that footage, narration or animation already exists.
+
+Storyboard execution may correct one malformed candidate submission within the same
+shared call and time limits. Schema-declared JSON containers returned as encoded text
+are decoded before validation; invalid content is never committed merely because it
+can be parsed.

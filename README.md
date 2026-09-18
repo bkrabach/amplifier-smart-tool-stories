@@ -5,7 +5,7 @@
 ![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.jpg)
 
 Stories helps you and your agent turn notes, evidence and existing writing into
-presentations and documents. Describe who you are writing for and what they need
+presentations, documents and storyboards. Describe who you are writing for and what they need
 to understand. Stories plans, writes and reviews a draft, keeping its claims tied
 to the material you supplied.
 
@@ -29,6 +29,14 @@ Your agent installs and runs the tool, supplies your material, and opens the rev
 workspace. You can also ask for a document, an executive brief, release notes, a
 case study or an explanation of measurements. No repository checkout is needed to
 use Stories.
+
+For a storyboard, you can start with a rough idea, develop an outline and add
+supplied images as the sequence takes shape. Ask to explore alternatives when you
+want two different approaches; ordinary creation develops one direction. Compare
+them side by side, focus either for comments, and explicitly choose one to continue.
+Export a ZIP to keep the structured panels, brief, HTML viewer and image files
+together. This first implementation supports up to eight panels per direction;
+image generation and finished video production are separate capabilities.
 
 ### Before your first story
 

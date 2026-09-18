@@ -125,7 +125,36 @@ Proposed behavioral checks, not claims of implementation or current conformance:
 - Generating alternative documents or presentations. Their comparison views share the
   dashboard model, but alternative generation for those formats remains deferred.
 
+## Initial implementation scope
+
+The library and CLI provide structured storyboard import, bounded model generation,
+comment-driven refinement, explicit direction selection, brief corrections and
+read-only comparison. Ordinary generation requests one direction; `explore=true`
+requests two. Each direction supports one to eight panels, with optional retained
+still images. A generated comparison shares a maximum of twelve model calls,
+including evidence extraction, candidate review, repairs and a diversity check.
+Completed reviewed candidates can be retained with a `partial` operation result
+when another candidate fails; cancellation and hard deadlines still fence commits.
+
+The dashboard compares storyboard, document and presentation revisions. It does
+not generate document or presentation alternatives. Storyboard exports are HTML
+for review and ZIP for structured content plus assets. Automatic image generation,
+multi-base synthesis and finished video are not implemented by this slice.
+Scripted-provider tests establish orchestration behavior; they do not establish
+live-model quality or audience comprehension.
+
 ## Changelog
 
 - **2026-09-18** — First behavioral draft for general-purpose storyboard exploration,
   progressive visual detail, meaningful alternatives and retained structured sequences.
+
+## Optional production handoff
+
+On request, panels can describe production requirements: what needs to be made or
+captured, what it must communicate and relevant delivery constraints. The brief
+travels with the exported storyboard. Ordinary outlines need not include it.
+Requirements do not imply completed assets, assigned tools, execution authority,
+completion statuses or dependency management. A person may leave Stories and use
+the handoff elsewhere without returning to update it. The caller selects and runs
+production tools. This implementation retains optional per-panel text requirements
+in structured exports and renders them alongside the panel.

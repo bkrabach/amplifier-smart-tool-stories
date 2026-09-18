@@ -81,6 +81,7 @@ class Dashboard:
                     "/style.css": ("dashboard.css", "text/css"),
                     "/document-view.js": ("document-view.js", "text/javascript"),
                     "/provider-settings.js": ("provider-settings.js", "text/javascript"),
+                    "/comparison.js": ("comparison.js", "text/javascript"),
                     "/bridge.js": ("bridge.js", "text/plain"),
                 }
                 if path in assets:
@@ -153,6 +154,8 @@ class Dashboard:
                             name
                             in {
                                 "get_story",
+                                "get_comparison",
+                                "select_direction",
                                 "get_preview",
                                 "select_revision",
                                 "accept_revision",

@@ -13,9 +13,10 @@ from .artifacts import digest, evidence_checked, parse_html, preview, validate_a
 from .errors import StoriesError, require
 from .media import MediaLibrary, bindings, select, warnings_for
 from .store import Store, identity, now
+from .storyboard_library import StoryboardLibrary
 
 
-class Stories(MediaLibrary):
+class Stories(StoryboardLibrary, MediaLibrary):
     def __init__(
         self,
         storage=None,
@@ -271,6 +272,7 @@ class Stories(MediaLibrary):
         for rev in story["revisions"]:
             rev.pop("html")
             rev.pop("document", None)
+            rev.pop("storyboard", None)
         return story
 
     def get_revision(self, story_id, revision_id):
@@ -338,6 +340,8 @@ class Stories(MediaLibrary):
             "result": None,
             "error": None,
         }
+        if story.get("kind") == "storyboard":
+            operation.update(brief_id=story["brief_id"], direction_count=1)
         self.store.put(db, "operations", operation)
         self.store.event(db, story["id"], "operation_queued", operation_id=operation["id"])
         return operation["id"]
@@ -422,6 +426,9 @@ class Stories(MediaLibrary):
                 {"operation_id": operation_id, "question": prior["result"]["message"], "answer": text}
             ]
             child["provider"] = prior["provider"]
+            for key in ("direction_count", "brief_id"):
+                if key in prior:
+                    child[key] = prior[key]
             self.store.put(db, "operations", child)
             prior["answered_by"] = child_id
             prior["state"] = "continued"
@@ -614,6 +621,8 @@ class Stories(MediaLibrary):
                     now() <= op["deadline"], "Operation exhausted its time allowance.", "execution_timeout"
                 )
                 story = self.store.get(db, "stories", op["story_id"])
+                if story.get("kind") == "storyboard":
+                    return self._commit_storyboards(db, story, current, result)
                 require(
                     isinstance(result, dict) and result.get("action") in {"answer", "clarify", "revise"},
                     "Invalid structured model submission.",
@@ -785,7 +794,7 @@ class Stories(MediaLibrary):
 
         return {
             "approaches": catalog(),
-            "outputs": ["presentation", "document"],
+            "outputs": ["presentation", "document", "storyboard"],
             "selection": "Internal evidence planning; describe your purpose and audience.",
             "limits": "Supplied text only; no network research, publication or arbitrary file conversion.",
         }
@@ -864,7 +873,14 @@ class Stories(MediaLibrary):
                     "description": getattr(Stories, name).__doc__,
                     "signature": str(inspect.signature(getattr(Stories, name))),
                     "intelligence": "model-backed"
-                    if name in {"generate", "answer_question", "run_operation", "test_provider"}
+                    if name
+                    in {
+                        "generate",
+                        "generate_storyboard",
+                        "answer_question",
+                        "run_operation",
+                        "test_provider",
+                    }
                     else "conditional"
                     if name in {"add_comment", "respond"}
                     else "deterministic",
@@ -876,6 +892,12 @@ class Stories(MediaLibrary):
 
 CAPABILITIES = [
     "manifest",
+    "create_storyboard",
+    "generate_storyboard",
+    "revise_storyboard",
+    "select_direction",
+    "update_storyboard_brief",
+    "get_comparison",
     "import_media",
     "resize_media",
     "get_media",

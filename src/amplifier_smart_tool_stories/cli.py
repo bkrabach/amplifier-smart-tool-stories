@@ -77,9 +77,9 @@ def main():
                 result = {**result, "operation": api.get_operation(result["operation_id"])}
         print(json.dumps(result, ensure_ascii=False))
         if isinstance(result, dict) and (
-            result.get("state") == "failed"
+            result.get("state") in {"failed", "partial"}
             or result.get("status") == "failed"
-            or result.get("operation", {}).get("state") == "failed"
+            or result.get("operation", {}).get("state") in {"failed", "partial"}
         ):
             raise SystemExit(1)
     except StoriesError as exc:

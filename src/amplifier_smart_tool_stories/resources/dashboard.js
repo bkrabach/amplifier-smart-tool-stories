@@ -191,8 +191,10 @@ function update() {
   const agents = notes().filter((n) => n.author === "agent");
   $("agent").hidden = !agents.length;
   $("agent").textContent = `Agent highlights · ${agents.length}`;
-  $("available").hidden =
-    !story.latest_revision || story.latest_revision === revision;
+  const direction = story.directions?.find(d => d.id === story.revisions.find(r => r.id === revision)?.direction_id);
+  const newest = direction?.latest_revision || story.latest_revision;
+  $("available").dataset.revision = newest || "";
+  $("available").hidden = !newest || newest === revision;
   send("annotations", { annotations: notes() });
   renderMessages();
   $("threads").replaceChildren();
@@ -265,15 +267,15 @@ async function loadRevision(id, initialSlide = 0) {
       }
   }
   if (request !== loadRequest) return;
-  documentKind = p.kind === "document";
+  documentKind = ["document", "storyboard"].includes(p.kind);
   document.body.classList.toggle("document-review", documentKind);
   $("documentTools").hidden = !documentKind;
   commentIndex = -1;
   $("exportFormat").hidden = false;
   for (const option of $("exportFormat").options) {
-    option.hidden = documentKind ? option.value === "zip" : ["pdf", "docx"].includes(option.value);
+    option.hidden = p.kind === "document" ? option.value === "zip" : ["pdf", "docx"].includes(option.value);
   }
-  $("exportFormat").value = (p.assets || []).some(a => a.mime_type.startsWith("video/")) ? "zip" : "html";
+  $("exportFormat").value = p.kind === "storyboard" ? "zip" : (p.assets || []).some(a => a.mime_type.startsWith("video/")) ? "zip" : "html";
   $("exportLimit").textContent = "";
   revision = id;
   slide = initialSlide;
@@ -304,7 +306,7 @@ async function loadRevision(id, initialSlide = 0) {
   update();
 }
 async function choose(id) {
-  await api("select-revision", { revision_id: id, request_id: requestId() });
+  if (story.kind !== "storyboard") await api("select-revision", { revision_id: id, request_id: requestId() });
   await loadRevision(id, slide);
 }
 window.addEventListener("message", (e) => {
@@ -460,7 +462,7 @@ $("more").onclick = () => {
 $("closeDetails").onclick = () => {
   $("details").hidden = true;
 };
-$("available").onclick = () => choose(story.latest_revision).catch(error);
+$("available").onclick = () => choose($("available").dataset.revision).catch(error);
 $("versions").onchange = (e) => choose(e.target.value).catch(error);
 $("exportFormat").onchange = () => {
   $("exportLimit").textContent =
@@ -523,6 +525,7 @@ async function boot() {
     : initial.revision_id || story.selected_revision;
   if (id) await loadRevision(id, saved?.revision === id ? saved.slide : 0);
   else $("connection").textContent = "Waiting for first artifact";
+  window.dispatchEvent(new Event("stories-ready"));
   setInterval(async () => {
     if (polling) return;
     polling = true;
@@ -649,4 +652,15 @@ $("acceptRevision").onclick = async () => {
     story = await api("get-story", {});
     update();
   } catch (e) { error(e); }
+};
+
+window.StoriesReview = {
+  api, error, story: () => story, focus: id => loadRevision(id, 0),
+  save: async () => { if (!$("composer").hidden) await saveDraft(); },
+  refresh: async () => { story = await api("get-story"); update(); },
+  media: async (revision_id, asset_id) => {
+    const response = await fetch("/api/media", {method:"POST", headers:{Authorization:"Bearer " + token,"Content-Type":"application/json"}, body:JSON.stringify({revision_id,asset_id})});
+    if (!response.ok) throw Error("Retained media unavailable");
+    return response.blob();
+  }
 };

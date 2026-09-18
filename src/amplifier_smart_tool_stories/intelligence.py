@@ -54,7 +54,14 @@ def execute(story, operation, cancelled):
             async def ask(instruction, payload, images=None, schema=COMPOSITION):
                 require(not cancelled(), "Operation cancelled.", "cancelled")
                 require(
-                    len(calls) < (11 if story.get("kind") == "document" else 5),
+                    len(calls)
+                    < (
+                        12
+                        if story.get("kind") == "storyboard"
+                        else 11
+                        if story.get("kind") == "document"
+                        else 5
+                    ),
                     "Model call allowance exhausted.",
                     "execution_limit",
                 )
@@ -73,6 +80,7 @@ def execute(story, operation, cancelled):
                         }
                         for i in images
                     ]
+                calls.append({"status": "started"})
                 text, provenance = await complete(
                     provider,
                     config,
@@ -88,8 +96,18 @@ def execute(story, operation, cancelled):
                     remaining,
                     schema=schema,
                 )
-                calls.append(provenance)
-                return parse_result(text)
+                calls[-1] = provenance
+                result = parse_result(text)
+                if story.get("kind") == "storyboard":
+                    from .storyboards import decode_containers
+
+                    result = decode_containers(result, schema)
+                return result
+
+            if story.get("kind") == "storyboard":
+                from .storyboard_intelligence import compose
+
+                return await compose(story, operation, ask, calls)
 
             catalog, excerpts = source_excerpts(story["sources"])
             note = next((n for n in story["annotations"] if n["id"] == operation["annotation_id"]), None)

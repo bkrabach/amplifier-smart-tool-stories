@@ -9,6 +9,25 @@ from .lib import Stories
 
 # Examples are valid JSON inputs; retained identities must come from earlier receipts.
 VALUES = {
+    "idea": "Explain a fictional team's handoff as a short visual sequence.",
+    "brief": {"intent": "Explain the handoff", "assumptions": [], "open_questions": []},
+    "storyboard": {
+        "name": "Follow the request",
+        "approach": "A concrete journey",
+        "tradeoff": "Less system detail",
+        "panels": [
+            {
+                "id": "arrival",
+                "title": "A request arrives",
+                "action": "A fictional team receives a request.",
+                "visual": "Sketch of a request card",
+                "asset_id": "",
+                "narration": "",
+                "notes": "",
+                "evidence_ids": [],
+            }
+        ],
+    },
     "asset_id": "ASSET_ID",
     "asset_ids": ["ASSET_ID"],
     "name": "Demo poster",
@@ -49,6 +68,36 @@ VALUES = {
 }
 
 GUIDANCE = {
+    "create_storyboard": (
+        "Import a structured outline or illustrated storyboard for shared review.",
+        "status, story_id, revision_id and direction_id. No direction is chosen automatically.",
+        "Read the storyboard schema in stories skill. Supply 1–8 panels with stable IDs, optional still-image asset IDs and empty strings for unused text. Optional production_requirements lists up to four asset/work requirements (500 characters each), exported with the storyboard; omit for outlines. Import is deterministic and does not fact-check. Fidelity is outline, mixed or illustrated; illustrated requires a retained image on every panel.",
+    ),
+    "generate_storyboard": (
+        "Develop a rough idea with shared storyboarding expertise; sources may be empty for clearly creative work.",
+        "Queued story_id/operation_id. Read get-operation for needs_input, succeeded, partial or failed; results list revision_ids and failures.",
+        "Ordinary creation produces one direction. Set explore=true only when the person requests alternatives; then two substantive approaches share one deadline and at most 12 model calls, with one repair per candidate. Uses the configured Amplifier Agent provider and rendered review. Read-only comparison never generates. Only supplied still images are available; planned visuals are not image generation. Use answer-question for initial clarification, comments for refinement. Live output quality remains model-reviewed, not independent proof.",
+    ),
+    "revise_storyboard": (
+        "Retain an explicit structured edit, attach supplied images, or import an explicitly requested alternative.",
+        "status, story_id, revision_id and direction_id.",
+        "No model use. Preserve existing panel IDs for unchanged panels. asset_ids replaces the attached asset list if supplied. Optional production_requirements supplies a portable asset brief without tracking or execution. new_direction=true branches from the exact base; otherwise a stale direction head conflicts. Earlier revisions and acceptance remain intact; new revisions have no inherited semantic/visual pass.",
+    ),
+    "select_direction": (
+        "Record the person's expressed choice of storyboard direction at the reviewed revision.",
+        "status, direction_id and revision_id; observable in shared state and changes.",
+        "No model use, publication or human acceptance. Do not invoke merely to inspect/focus. Superseded-brief revisions cannot be chosen. Other directions remain retained.",
+    ),
+    "update_storyboard_brief": (
+        "Correct common storyboard intent without silently changing alternatives.",
+        "status, brief_id and count of superseded directions.",
+        "Brief contains intent, assumptions and open_questions. Retains earlier briefs and marks existing directions superseded, without model use. Comment on a direction under explicit feedback authority to revise it against the updated brief; other directions stay superseded. In-flight work under the old brief cannot commit.",
+    ),
+    "get_comparison": (
+        "Inspect one or two retained versions side by side without choosing or generating.",
+        "items with exact revision/direction identities, rationale, superseded state and isolated preview payloads.",
+        "Works for storyboard, document and presentation revisions in the same story. Omit revision_ids for the latest two direction heads, or latest two ordinary revisions. No assumption of matching page counts; revisions of one direction are not mislabeled as different generated approaches. Alternative generation for documents/presentations remains unavailable.",
+    ),
     "import_media": (
         "Retain a supplied image, video or caption track without changing it.",
         "status, asset metadata/identity and actionable size warnings.",
@@ -223,6 +272,13 @@ GUIDANCE = {
 
 
 FIELD_HELP = {
+    "idea": "Rough creative intent and explicitly supplied conversation context",
+    "storyboard": "name, approach, tradeoff and panels; each panel has id, title, action, visual, asset_id, narration, notes, evidence_ids",
+    "brief": "Shared intent text plus assumptions and open_questions text lists",
+    "explore": "Enable only for user-requested alternatives; default false develops one direction",
+    "fidelity": "outline, mixed or illustrated; illustrated requires retained images for every panel",
+    "new_direction": "Explicitly branch an imported structured edit as a separate direction",
+    "revision_ids": "One or two exact revision IDs in this story; omitted uses latest direction heads or versions",
     "asset_id": "Retained asset identity returned by import-media or resize-media",
     "asset_ids": "Complete list of retained assets available to this presentation; reference them as asset:ASSET_ID",
     "name": "Human-readable media name",
@@ -252,7 +308,7 @@ FIELD_HELP = {
     "sequence": "Nonnegative increasing draft version",
     "after": "Previous event cursor, or zero",
     "kind": "presentation or document",
-    "format": "html or zip for presentations; html, pdf or docx for structured documents",
+    "format": "html or zip for presentations/storyboards; storyboard ZIP includes structured content; html, pdf or docx for documents",
     "output_path": "New destination file in an existing directory",
     "provider": "Provider alias; null uses current selection where accepted",
     "model": "Provider model ID; null uses its default",
@@ -298,6 +354,7 @@ def skill_help(name=None):
             if name
             in {
                 "generate",
+                "generate_storyboard",
                 "answer_question",
                 "run_operation",
                 "test_provider",

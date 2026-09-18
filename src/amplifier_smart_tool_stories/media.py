@@ -302,7 +302,10 @@ class MediaLibrary:
         def action(db):
             story = self.store.get(db, "stories", story_id)
             base = self._revision(story, revision_id)
-            require(base.get("kind") != "document", "Media composition currently supports presentations.")
+            require(
+                base.get("kind") == "presentation",
+                "Use revise-storyboard for storyboard assets; revise-media supports presentations.",
+            )
             assets = select(db, asset_ids)
             markup = base["html"] if html is None else html
             bindings(markup, assets, strict=True)

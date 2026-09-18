@@ -197,6 +197,27 @@ def artifact(revision, format, media_content=None):
                     archive.writestr(zipfile.ZipInfo(name), value)
 
                 write_member("index.html", data)
+                if revision.get("storyboard") is not None:
+                    write_member(
+                        "storyboard.json",
+                        json.dumps(
+                            {
+                                "schema_version": 1,
+                                "revision_id": revision["id"],
+                                "direction_id": revision["direction_id"],
+                                "brief_id": revision["brief_id"],
+                                "brief": revision["brief"],
+                                "audience": revision["audience"],
+                                "fidelity": revision["fidelity"],
+                                "storyboard": revision["storyboard"],
+                                "evidence": revision["evidence"],
+                                "assets": selected,
+                                "asset_paths": paths,
+                            },
+                            ensure_ascii=False,
+                            indent=2,
+                        ),
+                    )
                 for asset in selected:
                     write_member(paths[asset["id"]], content[asset["id"]])
                 write_member(
@@ -218,6 +239,10 @@ def artifact(revision, format, media_content=None):
         if selected:
             limitations.append(
                 "Static layout review does not certify video playback or audio. Browser codec support varies."
+            )
+        if revision.get("kind") == "storyboard" and format == "html":
+            limitations.append(
+                "Review-only HTML. Choose ZIP to include editable storyboard.json and exact assets."
             )
     else:
         require(
