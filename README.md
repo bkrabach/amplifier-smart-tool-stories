@@ -1,5 +1,7 @@
 # Stories
 
+[Website source and preview instructions](site/README.md)
+
 **Turn source material into stories people can use.**
 
 ![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.jpg)

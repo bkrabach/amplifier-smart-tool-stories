@@ -1,0 +1,55 @@
+{
+  "kind": "tool",
+  "key": "stories",
+  "name": "Stories",
+  "accent": "#586882",
+  "title": "Stories | Amplifier Smart Tools",
+  "promise": "Turn source material into stories people can use.",
+  "description": "Bring the notes, evidence, and audience. Develop a presentation, document, or storyboard, then read it, comment on it, and refine the result with your agent.",
+  "image": "docs/images/stories-review.jpg",
+  "alt": "Stories presentation review workspace showing a generated product story with contextual feedback.",
+  "caption": "The real Stories workspace reviewing a presentation it generated about its own development.",
+  "width": 1202,
+  "height": 670,
+  "flow_title": "From the material to something worth reading.",
+  "flow_intro": "Start with what you know and who needs to understand it. Keep the evidence connected to the story.",
+  "steps": [
+    [
+      "Bring the evidence.",
+      "Supply source text, distinguish facts from hypotheses, and describe the audience and purpose. Stories plans and creates a draft."
+    ],
+    [
+      "Read and refine.",
+      "Review the actual slides or document. Select text or an element to leave a comment, and allow a bounded round of answers or revisions."
+    ],
+    [
+      "Accept a version and export.",
+      "Choose a specific revision. Export presentations as HTML or a media ZIP, and documents as HTML, PDF, or editable Word."
+    ]
+  ],
+  "detail_title": "The conversation stays with the work.",
+  "details": [
+    [
+      "Comments in context.",
+      "Feedback sits beside the material it describes. New revisions remain separate from the one you are reading."
+    ],
+    [
+      "Sources stay inspectable.",
+      "Review source references, quotations, supported calculations, and material changes alongside the draft."
+    ],
+    [
+      "Explore a sequence.",
+      "Develop storyboards with supplied images, compare alternatives, and export structured panels with their brief and viewer."
+    ]
+  ],
+  "prompt": "Use Stories to turn my project notes into a short presentation for engineering leaders. Read stories --help, help me configure a provider, and keep claims grounded in the supplied material. Open the draft for review and a bounded round of refinement.",
+  "install": "uv tool install \"amplifier-smart-tool-stories @ git+https://github.com/robotdad/amplifier-smart-tool-stories\"\nstories --help",
+  "prerequisites": "Python 3.12+, Git, uv, and Pango for text layout. Video exports additionally need FFmpeg and FFprobe.",
+  "model_note": "Generation needs separately configured model access through Amplifier Agent. Reading retained work and recording acceptance need no model.",
+  "guide": "src/amplifier_smart_tool_stories/SMART_TOOL.md",
+  "related": [
+    "unfold",
+    "showrun",
+    "possibly"
+  ]
+}
