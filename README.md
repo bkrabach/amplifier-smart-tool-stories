@@ -50,7 +50,6 @@ Use a coding agent that can install and run local tools and open a browser for t
 optional workspace. Stories requires Python 3.12+, Git and uv. Creating and reviewing
 generated artifacts also requires Pango for text layout. Your agent can follow the
 [setup instructions](src/amplifier_smart_tool_stories/SMART_TOOL.md#install-and-prerequisites).
-The current implementation is validated on macOS.
 
 Stories uses **Amplifier Agent** and needs its own configured model access. Your
 coding agent’s model access is not automatically shared with it. OpenAI, Anthropic,

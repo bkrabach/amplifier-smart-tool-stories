@@ -11,6 +11,8 @@ use_cases:
   - Answer or act on anchored feedback while preserving the reader's place
 platforms:
   - macos
+  - linux
+  - windows
 requires:
   - name: mcp-host
     purpose: Optional stdio MCP and portable MCP Apps review; install the mcp extra. No host is needed for library or CLI use.
