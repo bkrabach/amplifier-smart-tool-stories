@@ -1,6 +1,6 @@
 # Stories
 
-[Website source and preview instructions](site/README.md)
+[Website](https://robotdad.github.io/amplifier-smart-tool-stories/)
 
 **Turn source material into stories people can use.**
 
