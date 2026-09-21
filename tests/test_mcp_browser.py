@@ -55,6 +55,7 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
             errors, calls, authorization_attempts = [], [], []
             delays = {}
             lose_authorization_ack = True
+            new_authorization_recorded = asyncio.Event()
             page.on("pageerror", lambda error: errors.append(str(error)))
 
             async def tool(args):
@@ -69,6 +70,8 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
                 )
                 if args["name"] == "stories_grant_feedback":
                     authorization_attempts.append(args["arguments"])
+                    if len(authorization_attempts) == 3:
+                        new_authorization_recorded.set()
                     if lose_authorization_ack:
                         lose_authorization_ack = False
                         raise RuntimeError("Authorization acknowledgement was lost")
@@ -122,6 +125,7 @@ def test_portable_review_drafts_comparison_media_and_nested_isolation(tmp_path):
             # A distinct control makes replacing a grant a new, explicit intent.
             await frame.locator("#operations").fill("2")
             await frame.get_by_role("button", name="Authorize new feedback", exact=True).click()
+            await asyncio.wait_for(new_authorization_recorded.wait(), timeout=5)
             await expect(frame.locator("#notice")).to_have_text(
                 "Finite feedback allowance recorded; no work started."
             )

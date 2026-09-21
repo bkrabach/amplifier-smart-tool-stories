@@ -20,6 +20,9 @@ def render(html, include_pdf=False, media=None):
     media = media or {}
     clean, _ = preview(html, [{"id": key[6:]} for key in media])
     soup = parse_html(clean)
+    # Preview strips navigation; PDF delivery keeps validated link annotations.
+    for link in soup.select("a[data-stories-link]"):
+        link["href"] = link["data-stories-link"]
     for video in soup.select("video"):
         if video.get("poster") in media:
             poster = soup.new_tag("img", src=video["poster"])

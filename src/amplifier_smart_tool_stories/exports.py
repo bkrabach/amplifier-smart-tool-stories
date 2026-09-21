@@ -5,6 +5,7 @@ import base64
 import hashlib
 import io
 
+from .documents import inline_parts
 from .errors import require
 
 
@@ -54,11 +55,29 @@ def word(revision):
     doc.add_paragraph(value["title"], "Title")
     if value["subtitle"]:
         doc.add_paragraph(value["subtitle"], "Subtitle")
+
+    def write_inline(paragraph, block):
+        from docx.opc.constants import RELATIONSHIP_TYPE as RT
+
+        for text, bold, href in inline_parts(block):
+            run = paragraph.add_run(text)
+            if bold:
+                run.bold = True
+            if href:
+                run.font.color.rgb = RGBColor.from_string("176EA2")
+                run.underline = True
+                link = OxmlElement("w:hyperlink")
+                link.set(qn("r:id"), paragraph.part.relate_to(href, RT.HYPERLINK, is_external=True))
+                link.append(run._r)
+                paragraph._p.append(link)
+
     for b in value["blocks"]:
         citations = " [" + ", ".join(b["evidence_ids"]) + "]" if b["evidence_ids"] else ""
         if b["kind"] == "table":
             if b["text"] or citations:
-                caption = doc.add_paragraph(b["text"] + citations)
+                caption = doc.add_paragraph()
+                write_inline(caption, b)
+                caption.add_run(citations)
                 caption.paragraph_format.keep_with_next = True
             table = doc.add_table(rows=0, cols=len(b["rows"][0]))
             table.autofit = False
@@ -85,14 +104,15 @@ def word(revision):
             doc.add_paragraph()
         elif b["kind"] == "list":
             if b["text"]:
-                doc.add_paragraph(b["text"])
+                write_inline(doc.add_paragraph(), b)
             for i, item in enumerate(b["items"]):
                 paragraph = doc.add_paragraph(
                     item + (citations if i == len(b["items"]) - 1 else ""), "List Bullet"
                 )
                 paragraph.paragraph_format.space_after = Pt(6)
         else:
-            paragraph = doc.add_paragraph(b["text"], "Heading 1" if b["kind"] == "heading" else "Normal")
+            paragraph = doc.add_paragraph(style="Heading 1" if b["kind"] == "heading" else "Normal")
+            write_inline(paragraph, b)
             if b["kind"] == "quote":
                 paragraph.paragraph_format.left_indent = Pt(13.5)
                 paragraph.paragraph_format.right_indent = Pt(13.5)

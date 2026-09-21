@@ -194,3 +194,11 @@ for making or reviewing decks and not a general-purpose video editor.
   storyboard delivery, preserving visual provenance and exact reviewed content.
 - **2026-09-18** — Defined supplied media, portable HTML delivery and notes-aware
   presentation-to-video export.
+
+## Structured document inline formatting
+
+Document block text supports explicit Unicode ranges for bold and HTTP(S) links.
+Formatting preserves visible text and annotation offsets, survives HTML/PDF/Word
+export, and never runs source markup or scripts. Existing plain-text documents
+remain valid. Review link navigation is an explicit user action outside the
+artifact frame; MCP Apps delegates it to the host.

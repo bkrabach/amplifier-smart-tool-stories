@@ -312,6 +312,14 @@ async function choose(id) {
 window.addEventListener("message", (e) => {
   if (e.source !== frame.contentWindow || e.data?.channel !== channel) return;
   const m = e.data;
+  if (m.type === "open-link") {
+    try {
+      const url = new URL(m.href);
+      if (["http:", "https:"].includes(url.protocol) && !url.username && !url.password)
+        window.open(url.href, "_blank", "noopener,noreferrer");
+    } catch (_) { /* Invalid links never navigate the review surface. */ }
+    return;
+  }
   if (m.type === "document-layout") {
     send("annotations", { annotations: notes() });
     if (m.missingPassage) {

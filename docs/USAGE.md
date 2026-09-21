@@ -576,3 +576,14 @@ creative quality. Review receives code-computed narration counts and provisional
 spoken-time estimates, not model-estimated word counts. Printed storyboard sheets begin with a separate direction overview,
 then the panel sequence. Production requirements stay optional and concise; timing
 is a provisional narration/visual budget, not a promise of produced video duration.
+
+Inline document formatting: blocks may include `marks`, an ordered, nonoverlapping
+list of `{start, end, bold, href}` ranges over the block's `text`. Offsets count
+Unicode characters, end exclusive. Use `bold: true` for emphasis and an absolute
+HTTP(S) `href` without credentials, or `""` for no link. Omit `marks` or use `[]`
+for plain text. Formatting is supported in block text, including headings, list
+introductions and table captions; list items, table cells, title and subtitle
+remain plain text. Recompute marks when changing text. HTML/PDF/Word exports
+preserve the formatting. Review links open separately (through the host's link
+request in MCP Apps); selecting text still supports anchored comments. Raw HTML
+and Markdown in text remain literal content.

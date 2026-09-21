@@ -667,6 +667,15 @@ window.addEventListener("message", (event) => {
   )
     return;
   const m = event.data;
+  if (m.type === "open-link") {
+    run(async () => {
+      const url = new URL(m.href);
+      if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
+        throw Error("Unsupported link");
+      await app.openLink({ url: url.href });
+    });
+    return;
+  }
   if (m.type === "position") {
     totalSlides = m.total;
     $("position").textContent = m.slide + 1 + " / " + m.total;

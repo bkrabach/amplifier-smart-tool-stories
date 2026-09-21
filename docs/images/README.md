@@ -16,3 +16,16 @@ space below the slide. It is captured directly from the browser, with no composi
 or retouching. It excludes browser chrome, credentials, local filesystem paths and
 the private authenticated viewer URL. Generated trial state and intermediate outputs
 are not part of the repository.
+
+## Stories workflow demo
+
+`stories-demo.mp4` is a 20-second silent, captioned edit of real Showrun recordings:
+the full Scout window and a zoom into the user's request and Scout's initial response,
+the exported Stories presentation, retained feedback in the review dashboard,
+a revised slide with its demo playing, and the native document reading view. Waiting time is cut; transitions are crossfaded. The presentation
+and write-up were refined collaboratively, including caller edits and recovery of
+generation failures. Raw takes and operation receipts are retained privately.
+
+The site uses the 1440×900, 25 fps MP4 and `stories-demo-poster.png`. Outtake rendered
+`stories-demo.gif` at 960 pixels wide and 25 fps for the README. Earlier static
+artwork is preserved. No private dashboard URLs or credentials appear in the cut.

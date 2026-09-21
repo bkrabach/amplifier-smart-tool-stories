@@ -6,11 +6,11 @@
   "title": "Stories | Amplifier Smart Tools",
   "promise": "Turn source material into stories people can use.",
   "description": "Bring the notes, evidence, and audience. Develop a presentation, document, or storyboard, then read it, comment on it, and refine the result with your agent.",
-  "image": "docs/images/stories-review.jpg",
-  "alt": "Stories presentation review workspace showing a generated product story with contextual feedback.",
-  "caption": "The real Stories workspace reviewing a presentation it generated about its own development.",
-  "width": 1202,
-  "height": 670,
+  "image": "docs/images/stories-demo-poster.png",
+  "alt": "A request in Scout, followed by Stories presentation review, contextual feedback, and the finished team write-up.",
+  "caption": "Describe it to your agent. Review the presentation, refine it together, and share the story.",
+  "width": 1440,
+  "height": 900,
   "flow_title": "From the material to something worth reading.",
   "flow_intro": "Start with what you know and who needs to understand it. Keep the evidence connected to the story.",
   "steps": [
@@ -51,5 +51,6 @@
     "unfold",
     "showrun",
     "possibly"
-  ]
+  ],
+  "video": "docs/images/stories-demo.mp4"
 }

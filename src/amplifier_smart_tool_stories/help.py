@@ -399,7 +399,7 @@ FIELD_HELP = {
     "audience": "Intended readers",
     "html": "Literal HTML content",
     "sources": "List of source objects: required id/content; optional name, kind (source/summary/hypothesis/preference), attribution",
-    "document": "Structured title, subtitle and blocks object",
+    "document": "Structured title, subtitle and blocks object; block text supports optional marks [{start,end,bold,href}]",
     "request_id": "Caller-chosen unique mutation identity",
     "story_id": "Retained story ID",
     "revision_id": "Exact retained revision ID",

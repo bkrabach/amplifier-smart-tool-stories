@@ -189,3 +189,82 @@ def test_revision_keeps_existing_citation_meanings_when_extraction_order_changes
     assert result[2]["id"] == "fact3"
     assert result[2]["quote"] == "Five elsewhere"
     assert extracted[1]["id"] == "fact2"
+
+
+def test_inline_marks_exports_and_unicode_anchors(tmp_path):
+    import base64
+    import io
+    import zipfile
+
+    from bs4 import BeautifulSoup
+    from lxml import etree
+
+    doc = document()
+    block = doc["blocks"][1]
+    block["text"] = "🧭 Visit Stories & explore."
+    block["marks"] = [{"start": 8, "end": 15, "bold": True, "href": "https://example.com/stories?a=1&b=2"}]
+    html = render_document(doc)
+    soup = BeautifulSoup(html, "html.parser")
+    assert soup.select_one("a strong").text == "Stories"
+    assert soup.select_one("#evidence").get_text() == block["text"]
+    safe, anchors = preview(html)
+    assert "data-stories-link" in safe
+    assert (
+        validate_anchor(
+            html, {"kind": "text", "element": "d-evidence", "start": 8, "end": 15, "quote": "Stories"}
+        )["quote"]
+        == "Stories"
+    )
+    api = Stories(tmp_path)
+    r = api.create_document("Formatted", doc, "rich")
+    sid, rid = r["story_id"], r["revision_id"]
+    assert api.get_preview(sid, rid)["kind"] == "document"
+    with zipfile.ZipFile(io.BytesIO(base64.b64decode(api.get_export(sid, rid, "docx")["data_base64"]))) as z:
+        xml = etree.fromstring(z.read("word/document.xml"))
+        ns = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+        assert xml.xpath("//w:hyperlink/w:r/w:rPr/w:b", namespaces=ns)
+        assert "https://example.com/stories?a=1&amp;b=2" in z.read("word/_rels/document.xml.rels").decode()
+    import pypdfium2
+
+    pdf = pypdfium2.PdfDocument(base64.b64decode(api.get_export(sid, rid, "pdf")["data_base64"]))
+    assert "Stories" in pdf[0].get_textpage().get_text_range()
+    import ctypes
+
+    position = ctypes.c_int(0)
+    link = pypdfium2.raw.FPDF_LINK()
+    page = pdf[0]
+    assert pypdfium2.raw.FPDFLink_Enumerate(page, ctypes.byref(position), ctypes.byref(link))
+    action = pypdfium2.raw.FPDFLink_GetAction(link)
+    size = pypdfium2.raw.FPDFAction_GetURIPath(pdf, action, None, 0)
+    uri = ctypes.create_string_buffer(size)
+    pypdfium2.raw.FPDFAction_GetURIPath(pdf, action, uri, size)
+    assert uri.value.decode() == "https://example.com/stories?a=1&b=2"
+
+
+@pytest.mark.parametrize(
+    "mark",
+    [
+        {"start": 0, "end": 999, "bold": True, "href": ""},
+        {"start": True, "end": 3, "bold": True, "href": ""},
+        {"start": 0, "end": 3, "bold": True, "href": "javascript:alert(1)"},
+        {"start": 0, "end": 3, "bold": True, "href": "https://user:pass@example.com"},
+        {"start": 0, "end": 3, "bold": True, "href": "https://example.com\n"},
+    ],
+)
+def test_rejects_invalid_inline_marks(mark):
+    doc = document()
+    doc["blocks"][1]["marks"] = [mark]
+    with pytest.raises(StoriesError):
+        checked(doc)
+
+
+def test_rejects_overlapping_marks_and_spoofed_preview_link():
+    doc = document()
+    doc["blocks"][1]["marks"] = [
+        {"start": 0, "end": 5, "bold": True, "href": ""},
+        {"start": 4, "end": 7, "bold": True, "href": ""},
+    ]
+    with pytest.raises(StoriesError):
+        checked(doc)
+    html = '<html><body><p><a href="javascript:bad()" data-stories-link="https://example.com">unsafe</a></p></body></html>'
+    assert "data-stories-link" not in preview(html)[0]

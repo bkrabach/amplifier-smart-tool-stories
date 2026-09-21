@@ -78,6 +78,17 @@ DOCUMENT = obj(
                     "items": TEXTS,
                     "rows": {"type": "array", "items": TEXTS},
                     "evidence_ids": TEXTS,
+                    "marks": {
+                        "type": "array",
+                        "items": obj(
+                            {
+                                "start": {"type": "integer"},
+                                "end": {"type": "integer"},
+                                "bold": {"type": "boolean"},
+                                "href": TEXT,
+                            }
+                        ),
+                    },
                 }
             ),
         },

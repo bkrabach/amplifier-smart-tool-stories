@@ -557,3 +557,14 @@ Library/CLI retain their user-submission default for compatibility; the portable
 MCP adapter defaults both `add_comment` and `respond` to agent notes, which never
 consume feedback authority. User attribution is a caller assertion, not proof of
 human identity.
+
+Inline document formatting: blocks may include `marks`, an ordered, nonoverlapping
+list of `{start, end, bold, href}` ranges over the block's `text`. Offsets count
+Unicode characters, end exclusive. Use `bold: true` for emphasis and an absolute
+HTTP(S) `href` without credentials, or `""` for no link. Omit `marks` or use `[]`
+for plain text. Formatting is supported in block text, including headings, list
+introductions and table captions; list items, table cells, title and subtitle
+remain plain text. Recompute marks when changing text. HTML/PDF/Word exports
+preserve the formatting. Review links open separately (through the host's link
+request in MCP Apps); selecting text still supports anchored comments. Raw HTML
+and Markdown in text remain literal content.

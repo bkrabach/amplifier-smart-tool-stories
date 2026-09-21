@@ -18,7 +18,7 @@
     slide.style.setProperty("--stories-display", display);
   }
   const style = document.createElement("style");
-  style.textContent = `html,body{margin:0;min-height:100%;}body{padding:0!important}.slide{box-sizing:border-box!important;display:none!important;min-height:100vh!important;width:100%!important}.slide.stories-current{display:var(--stories-display,block)!important;position:relative!important;opacity:1!important;visibility:visible!important;transform:none!important}::highlight(stories){background:#f8d36b75;text-decoration:underline}::highlight(selectionTarget){background:#92c5ff80}[data-stories-selected]{outline:2px solid #95bde8!important;outline-offset:3px}[data-stories-agent]{outline:2px solid #f8d36b!important;outline-offset:3px}nav,.nav-dots,.slide-counter,.navigation{display:none!important}body{user-select:text!important}*{user-select:text}.stories-current{pointer-events:auto!important}`;
+  style.textContent = `a[data-stories-link]{color:#176ea2;text-decoration:underline;cursor:pointer}html,body{margin:0;min-height:100%;}body{padding:0!important}.slide{box-sizing:border-box!important;display:none!important;min-height:100vh!important;width:100%!important}.slide.stories-current{display:var(--stories-display,block)!important;position:relative!important;opacity:1!important;visibility:visible!important;transform:none!important}::highlight(stories){background:#f8d36b75;text-decoration:underline}::highlight(selectionTarget){background:#92c5ff80}[data-stories-selected]{outline:2px solid #95bde8!important;outline-offset:3px}[data-stories-agent]{outline:2px solid #f8d36b!important;outline-offset:3px}nav,.nav-dots,.slide-counter,.navigation{display:none!important}body{user-select:text!important}*{user-select:text}.stories-current{pointer-events:auto!important}`;
   document.head.append(style);
   const element = (id) =>
     [...document.querySelectorAll("[data-stories-id]")].find(
@@ -152,7 +152,18 @@
     }
   });
 
+  function openLink(e) {
+    const link = e.target.closest("a[data-stories-link]");
+    if (!link || getSelection()?.toString()) return false;
+    e.preventDefault();
+    emit("open-link", { href: link.dataset.storiesLink });
+    return true;
+  }
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") openLink(e);
+  });
   document.addEventListener("click", (e) => {
+    if (openLink(e)) return;
     if (e.target.closest("video")) return;
     if (!overlay || cancelled || dragging || getSelection()?.toString()) return;
     const hit = noteRanges.find((n) =>

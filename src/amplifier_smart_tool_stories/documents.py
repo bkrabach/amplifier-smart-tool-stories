@@ -4,8 +4,67 @@ import copy
 import re
 from html import escape
 from importlib.resources import files
+from urllib.parse import urlsplit
 
 from .errors import require
+
+
+def safe_link(value):
+    if not isinstance(value, str) or any(c.isspace() or ord(c) < 32 for c in value):
+        return False
+    try:
+        url = urlsplit(value)
+        return (
+            url.scheme in {"http", "https"} and bool(url.hostname) and not url.username and not url.password
+        )
+    except ValueError:
+        return False
+
+
+def checked_marks(text, marks):
+    require(isinstance(marks, list) and len(marks) <= 100, "Supply up to 100 inline marks.")
+    end = 0
+    for mark in marks:
+        require(
+            isinstance(mark, dict) and set(mark) == {"start", "end", "bold", "href"},
+            "Inline marks require start, end, bold and href.",
+        )
+        require(
+            type(mark["start"]) is int
+            and type(mark["end"]) is int
+            and end <= mark["start"] < mark["end"] <= len(text),
+            "Inline marks must be ordered nonoverlapping Unicode text ranges.",
+        )
+        require(type(mark["bold"]) is bool and isinstance(mark["href"], str), "Invalid inline style.")
+        require(
+            mark["href"] == "" or safe_link(mark["href"]),
+            "Links require an absolute HTTP(S) URL without credentials or whitespace.",
+        )
+        require(mark["bold"] or mark["href"], "Inline mark must specify bold or a link.")
+        end = mark["end"]
+
+
+def inline_parts(block):
+    text, end = block["text"], 0
+    for mark in block.get("marks", []):
+        if mark["start"] > end:
+            yield text[end : mark["start"]], False, ""
+        yield text[mark["start"] : mark["end"]], mark["bold"], mark["href"]
+        end = mark["end"]
+    if end < len(text):
+        yield text[end:], False, ""
+
+
+def inline_html(block):
+    result = []
+    for text, bold, href in inline_parts(block):
+        value = escape(text)
+        if bold:
+            value = "<strong>" + value + "</strong>"
+        if href:
+            value = '<a href="' + escape(href, quote=True) + '">' + value + "</a>"
+        result.append(value)
+    return "".join(result)
 
 
 def checked(document, evidence=None):
@@ -23,7 +82,9 @@ def checked(document, evidence=None):
     refs = None if evidence is None else {e["id"] for e in evidence}
     for block in blocks:
         require(
-            isinstance(block, dict) and set(block) == {"id", "kind", "text", "items", "rows", "evidence_ids"},
+            isinstance(block, dict)
+            and {"id", "kind", "text", "items", "rows", "evidence_ids"} <= set(block)
+            and set(block) <= {"id", "kind", "text", "items", "rows", "evidence_ids", "marks"},
             "Document blocks require id, kind, text, items, rows, evidence_ids.",
         )
         bid = block["id"]
@@ -51,6 +112,7 @@ def checked(document, evidence=None):
             and all(isinstance(x, str) and 0 < len(x) <= 300 for x in block["items"]),
             "Lists support up to eight short items.",
         )
+        checked_marks(block["text"], block.get("marks", []))
         rows = block["rows"]
         require(
             isinstance(rows, list)
@@ -95,7 +157,7 @@ def render_document(document, evidence=None):
     if document["subtitle"]:
         chunks.append(f'<p id="subtitle" class="subtitle">{escape(document["subtitle"])}</p>')
     for b in document["blocks"]:
-        text, bid = escape(b["text"]), b["id"]
+        text, bid = inline_html(b), b["id"]
         if b["kind"] == "list":
             body = (
                 (f"<p>{text}</p>" if text else "")

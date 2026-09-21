@@ -4,7 +4,7 @@
 
 **Turn source material into stories people can use.**
 
-![Stories showing its own product story in the live presentation review workspace.](docs/images/stories-review.jpg)
+[![Ask your agent, review the presentation, give feedback, and share the finished write-up.](docs/images/stories-demo.gif)](https://robotdad.github.io/amplifier-smart-tool-stories/)
 
 Stories helps you and your agent turn notes, evidence and existing writing into
 presentations, documents and storyboards. Describe who you are writing for and what they need

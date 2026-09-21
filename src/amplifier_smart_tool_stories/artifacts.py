@@ -4,6 +4,7 @@ import hashlib
 
 from bs4 import BeautifulSoup
 
+from .documents import safe_link
 from .errors import require
 
 MAX_HTML = 32 * 1024 * 1024
@@ -32,6 +33,8 @@ def preview(html, assets=None):
     allowed = {"asset:" + a["id"] for a in (assets or [])}
     for node in list(soup.find_all(True)):
         source = {key: node.get(key) for key in ("src", "poster")}
+        href = node.get("href")
+        node.attrs.pop("data-stories-link", None)
         for key in list(node.attrs):
             if key.startswith("on") or key in {
                 "srcdoc",
@@ -45,6 +48,10 @@ def preview(html, assets=None):
             }:
                 del node.attrs[key]
         node.attrs.pop("contenteditable", None)
+        if node.name == "a" and safe_link(href):
+            node["data-stories-link"] = href
+            node["role"] = "link"
+            node["tabindex"] = "0"
         if node.name in {"img", "video", "source", "track"}:
             for key, value in source.items():
                 if value in allowed:
