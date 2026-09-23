@@ -14,7 +14,7 @@ from .store import identity, now
 
 DEFAULTS = {
     "openai": {"model": "gpt-4o-mini-tts", "voice": "marin"},
-    "gemini": {"model": "gemini-2.5-flash-preview-tts", "voice": "Kore"},
+    "gemini": {"model": "gemini-3.1-flash-tts-preview", "voice": "Kore"},
 }
 ENV = {"openai": ["OPENAI_API_KEY"], "gemini": ["GOOGLE_API_KEY", "GEMINI_API_KEY"]}
 

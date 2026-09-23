@@ -82,7 +82,7 @@ fresh bounded stores. They are separate from ordinary tests:
 uv run python tests/evaluate_quality.py --allow-model --provider openai \
   --store .work/evaluation --run-id unique-run
 uv run python tests/evaluate_storytelling.py --allow-model --case case-study \
-  --provider anthropic --model claude-sonnet-4-6 --store .work/case-study \
+  --provider anthropic --model claude-sonnet-5 --store .work/case-study \
   --request-id case-study-1 --report .work/case-study-report.json
 ```
 

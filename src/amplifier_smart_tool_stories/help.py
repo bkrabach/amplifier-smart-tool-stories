@@ -151,7 +151,7 @@ GUIDANCE = {
     "configure_narration": (
         "Choose speech settings independently of writing settings.",
         "Effective store-scoped narration settings.",
-        "OpenAI or Gemini only. Existing native API keys are reused. Model and voice have provider defaults. This call does not synthesize, test access or spend.",
+        "OpenAI or Gemini only. Existing native API keys are reused. Model and voice have provider defaults; Gemini uses gemini-3.1-flash-tts-preview / Kore. Explicit model choices override defaults; updated defaults do not replace saved settings. This call does not synthesize, test access or spend.",
     ),
     "get_speaker_notes": (
         "Read the notes attached to a slide revision.",

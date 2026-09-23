@@ -438,7 +438,8 @@ Encoding is synchronous and does not perform speech synthesis.
 Use `narration-settings` and `configure-narration` for store-scoped speech settings,
 separate from writing settings. Providers: `openai` (`OPENAI_API_KEY`, defaults
 `gpt-4o-mini-tts` / `marin`) and `gemini` (`GOOGLE_API_KEY` then `GEMINI_API_KEY`,
-defaults `gemini-2.5-flash-preview-tts` / `Kore`). Key presence is not verified speech
+defaults `gemini-3.1-flash-tts-preview` / `Kore`). Updated defaults do not replace
+saved narration settings or explicit model choices. Key presence is not verified speech
 access; Anthropic, ChatGPT and Copilot authentication do not authorize these APIs.
 Speech goes directly to the provider, without an Amplifier Agent session.
 

@@ -45,6 +45,56 @@ def generate(api, r, request_id="speech", **kwargs):
     return receipt, api.get_operation(receipt["operation_id"])
 
 
+def test_gemini_narration_defaults(tmp_path):
+    api = Stories(tmp_path / "store")
+    settings = api.narration_settings()
+    assert settings["effective"] is None
+    gemini = next(p for p in settings["providers"] if p["provider"] == "gemini")
+    assert gemini["model"] == "gemini-3.1-flash-tts-preview"
+    assert gemini["voice"] == "Kore"
+    assert gemini["speech_access"] == "not_tested"
+    result = api.configure_narration("gemini", "config")
+    assert result["effective"] == {
+        "provider": "gemini",
+        "model": "gemini-3.1-flash-tts-preview",
+        "voice": "Kore",
+        "instructions": "",
+    }
+    assert Stories(tmp_path / "store").narration_settings()["effective"] == result["effective"]
+
+
+@pytest.mark.parametrize("model", ["gemini-2.5-flash-preview-tts", "custom-speech-model"])
+def test_gemini_explicit_model_and_saved_settings_survive_reopen(tmp_path, model):
+    api = Stories(tmp_path / "store")
+    result = api.configure_narration(
+        "gemini", "config", model=model, voice="Puck", instructions="Speak calmly."
+    )
+    expected = {
+        "provider": "gemini",
+        "model": model,
+        "voice": "Puck",
+        "instructions": "Speak calmly.",
+    }
+    assert result["effective"] == expected
+    reopened = Stories(tmp_path / "store")
+    settings = reopened.narration_settings()
+    assert settings["effective"] == expected
+    gemini = next(p for p in settings["providers"] if p["provider"] == "gemini")
+    assert gemini["model"] == "gemini-3.1-flash-tts-preview"
+    assert (
+        reopened.configure_narration(
+            "gemini", "config", model=model, voice="Puck", instructions="Speak calmly."
+        )
+        == result
+    )
+    # Queuing uses the retained settings, not the new provider default; no synthesis runs.
+    story = reopened.create_story("Saved speech settings", HTML, "create")
+    receipt = reopened.generate_narration(story["story_id"], story["revision_id"], {}, "speech")
+    narration = reopened.get_narration(story["story_id"], receipt["narration_id"])
+    assert narration["settings"] == expected
+    assert reopened.get_operation(receipt["operation_id"])["state"] == "queued"
+
+
 def test_reuse_notes_settings_and_exact_retry(tmp_path, monkeypatch):
     api, r, calls = fixture(tmp_path, monkeypatch)
     receipt, op = generate(api, r)
@@ -255,6 +305,9 @@ def test_direct_adapters_bound_requests_and_disable_retries(monkeypatch, provide
     else:
         assert captured["client"]["http_options"].retry_options.attempts == 1
         assert captured["client"]["http_options"].timeout == 7000
+        assert captured["request"]["model"] == "gemini-3.1-flash-tts-preview"
+        voice_config = captured["request"]["config"].speech_config.voice_config
+        assert voice_config.prebuilt_voice_config.voice_name == "Kore"
         assert captured["request"]["config"].automatic_function_calling.disable
         assert captured["request"]["contents"].endswith("Exact notes.")
 

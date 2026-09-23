@@ -440,8 +440,9 @@ stories --store /path/to/store --model-env --execution background generate-narra
 
 OpenAI uses `OPENAI_API_KEY` (default model `gpt-4o-mini-tts`, voice `marin`).
 Gemini uses `GOOGLE_API_KEY`, falling back to `GEMINI_API_KEY` (default model
-`gemini-2.5-flash-preview-tts`, voice `Kore`). Model, voice and delivery instructions
-are configurable. Key presence does not prove speech access. Anthropic, ChatGPT
+`gemini-3.1-flash-tts-preview`, voice `Kore`). Model, voice and delivery instructions
+are configurable. Updated defaults do not replace saved narration settings or
+explicit model choices. Key presence does not prove speech access. Anthropic, ChatGPT
 and Copilot credentials are not speech credentials. Never send keys in JSON inputs.
 
 Speech requires explicit `--model-env` authority and a bounded grant. Defaults are

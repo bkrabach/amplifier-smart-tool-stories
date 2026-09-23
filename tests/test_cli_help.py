@@ -36,6 +36,10 @@ def test_every_help_surface_is_an_offline_skill(tmp_path):
             assert "<skill_resources>" in result.stdout
             assert "--input" in result.stdout
             assert not result.stderr
+            if command in (None, "skill", "configure-narration"):
+                assert "gemini-3.1-flash-tts-preview" in result.stdout
+                assert "Kore" in result.stdout
+                assert "gemini-2.5-flash-preview-tts" not in result.stdout
             if command not in (None, "skill"):
                 assert "## When to use" in result.stdout
                 assert "## Result and next steps" in result.stdout
