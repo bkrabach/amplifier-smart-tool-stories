@@ -383,3 +383,27 @@ def test_mcp_user_comments_consume_grants_only_with_injected_execution(tmp_path)
             assert api.get_story(ids["story_id"])["feedback_grant"]["used"] == 2
 
     anyio.run(run)
+
+
+def test_explicit_dashboard_identity_tracks_story_across_review_methods(tmp_path):
+    async def run():
+        ids = fixture.seed(tmp_path)
+        api = Stories(tmp_path)
+        async with Client(create_server(api), extensions=[APPS]) as client:
+            for name, args in [
+                ("stories_get_story", {"story_id": ids["story_id"]}),
+                ("stories_get_review_view", {"story_id": ids["story_id"]}),
+            ]:
+                result = await client.call_tool(name, args)
+                assert not result.is_error, result.content
+                assert result.meta["amplifier/presentationId"] == "stories:story:" + ids["story_id"]
+            status = await client.call_tool("stories_status", {})
+            assert not (status.meta or {}).get("amplifier/presentationId")
+            rejected = await client.call_tool("stories_get_story", {"story_id": "missing"})
+            assert rejected.is_error and not (rejected.meta or {}).get("amplifier/presentationId")
+        other = fixture.seed(tmp_path / "independent")
+        async with Client(create_server(Stories(tmp_path / "independent")), extensions=[APPS]) as client:
+            result = await client.call_tool("stories_get_story", {"story_id": other["story_id"]})
+            assert result.meta["amplifier/presentationId"] != "stories:story:" + ids["story_id"]
+
+    anyio.run(run)

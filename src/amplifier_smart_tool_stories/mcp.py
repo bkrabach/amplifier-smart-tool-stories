@@ -250,6 +250,9 @@ def create_server(client):
                 return CallToolResult(
                     content=[TextContent(type="text", text=json.dumps(value, ensure_ascii=False))],
                     structuredContent=value,
+                    _meta={"amplifier/presentationId": "stories:story:" + value["story_id"]}
+                    if isinstance(value.get("story_id"), str) and 0 < len(value["story_id"]) <= 185
+                    else None,
                 )
             except StoriesError as error:
                 value = error.public()
