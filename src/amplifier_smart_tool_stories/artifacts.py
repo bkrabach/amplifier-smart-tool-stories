@@ -5,7 +5,7 @@ import hashlib
 from bs4 import BeautifulSoup
 
 from .documents import safe_link
-from .errors import require
+from .errors import StoriesError, require
 
 MAX_HTML = 32 * 1024 * 1024
 
@@ -16,9 +16,18 @@ def digest(text):
 
 def parse_html(html):
     require(
-        isinstance(html, str) and 0 < len(html.encode()) <= MAX_HTML,
-        "Supply nonempty markup under the 32 MiB parsing budget; import media separately.",
+        isinstance(html, str) and bool(html),
+        "Supply nonempty HTML markup.",
     )
+    size = len(html.encode())
+    if size > MAX_HTML:
+        raise StoriesError(
+            "markup_resource_limit",
+            f"Markup is {size} UTF-8 bytes, exceeding the {MAX_HTML}-byte (32 MiB) parsing budget.",
+            "Retain the complete structured source and use a workflow with sufficient byte capacity. "
+            "Import embedded media separately where applicable. Do not truncate, merge or rewrite "
+            "storyboard panels to fit a count quota; this is a byte limit, not a panel-count limit.",
+        )
     soup = BeautifulSoup(html, "html.parser")
     require(soup.html is not None and soup.body is not None, "HTML must contain html and body elements.")
     require(bool(soup.body.get_text(strip=True)), "HTML has no visible text content.")

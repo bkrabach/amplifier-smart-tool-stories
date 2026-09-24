@@ -96,11 +96,12 @@ GUIDANCE = {
     "create_storyboard": (
         "Import a structured outline or illustrated storyboard for shared review.",
         "status, story_id, revision_id and direction_id. No direction is chosen automatically.",
-        "Read the storyboard schema in stories skill. Supply 1–8 panels with stable IDs, optional still-image asset IDs and empty strings for unused text. Optional production_requirements lists up to four asset/work requirements (500 characters each), exported with the storyboard; omit for outlines. Import is deterministic and does not fact-check. Fidelity is outline, mixed or illustrated; illustrated requires a retained image on every panel.",
+        "Read the storyboard schema in stories skill. Supply at least one panel with stable IDs, optional still-image asset IDs and empty strings for unused text. There is no fixed panel-count cap: content dictates the count. Byte/time/model limits are separate resource budgets, not permission to truncate or merge scenes. Markup parsing is bounded to 32 MiB. Static review has 35 CPU seconds, at most 40 wall seconds (or remaining allowance), a 300 MB JSON input budget and 64 MiB combined PDF/JPEG output budget; use structured HTML/ZIP review if rendering exceeds resources. Optional production_requirements lists up to four asset/work requirements (500 characters each), exported with the storyboard; omit for outlines. Import is deterministic and does not fact-check. Fidelity is outline, mixed or illustrated; illustrated requires a retained image on every panel.",
     ),
     "generate_storyboard": (
         "Develop a rough idea with shared storyboarding expertise; sources may be empty for clearly creative work.",
         "Queued story_id/operation_id. Read get-operation for needs_input, succeeded, partial or failed; results list revision_ids and failures.",
+        "Markup exceeding 32 MiB fails with markup_resource_limit, not invalid_input or a repairable quality finding. The failed candidate remains in result.failures with its full structured sequence; no model repair is spent to reduce it. Preserve that source and choose a workflow with sufficient byte capacity. "
         "Ordinary creation produces one direction. Set explore=true only when the person requests alternatives; then two substantive approaches share one deadline and at most 12 model calls, with one repair per candidate. Uses the configured Amplifier Agent provider and rendered review. Anthropic/OpenAI API request strict submissions; storyboard schemas are also checked locally with bounded correction. Printed sheets have a separate direction overview. Read-only comparison never generates. Only supplied still images are available; planned visuals are not image generation. Use answer-question for initial clarification, comments for refinement. Live output quality remains model-reviewed, not independent proof.",
     ),
     "revise_storyboard": (
@@ -164,8 +165,9 @@ GUIDANCE = {
         "Read-only; never starts or resumes synthesis.",
     ),
     "generate_narration": (
-        "Synthesize and retain per-slide narration.",
+        "Synthesize and retain per-slide or storyboard-panel narration.",
         "Operation and narration IDs. Inspect get-operation and get-narration; get-narration-audio returns completed WAVs.",
+        "For a storyboard use source=storyboard_panels: one clip per panel in retained order, bound to stable panel IDs, direction and source revision/hash. Speaks each panel's exact narration, never action/notes/HTML sections. Every panel must have nonempty narration; omissions fail before spending. No notes/script_id overrides: revise the storyboard first. No fixed panel-count cap; speech grants are separate limits on uncached requests/characters and elapsed time, not permission to omit or merge panels. Raise the explicit grant for more than 12 distinct uncached texts; no automatic spending or allowance expansion. Panel progress/errors use completed_panels/total_panels and panel_errors; get audio by panel_id. No storyboard-to-deck conversion or automatic audio in storyboard ZIP/video export. Default source=presentation preserves the following presentation workflow. "
         "Use prepare-narration first when a spoken story needs writing, then supply script_id. Alternatively supply notes or omit both to speak existing notes verbatim. script_id and notes are mutually exclusive. Requires configured narration and model_env for new synthesis. Sends exact notes and delivery instructions to the chosen OpenAI/Gemini paid API directly, without an agent runtime. Voices are AI-generated. Defaults: 12 requests, 24000 text characters, 300 seconds; grant accepts max_requests (1–100), max_characters (1–200000), timeout_seconds (1–900). Notes must be nonempty, at most 4000 characters per slide. Identical text/settings reuse retained WAV without a provider request; settings are frozen at submission. Up to three distinct slide requests run in parallel by default (concurrency 1–8), sharing the same total request/character/deadline allowance. Duplicate text/settings share one request; partial results keep their actual slide numbers. SDK retries are disabled. Exact request retries never spend again. Partial completed audio survives failure/cancellation. Uncertain calls require a new request with retry_uncertain=true; simultaneous identical calls fail busy. Use background execution for UI or queued plus run-operation. cancel-operation prevents late commits; in-flight provider spending can occur.",
     ),
     "get_narration": (
@@ -174,9 +176,9 @@ GUIDANCE = {
         "Read-only and provider-free; state does not imply spoken fidelity or human approval.",
     ),
     "get_narration_audio": (
-        "Listen to a completed slide or reuse its audio.",
+        "Listen to a completed slide or storyboard panel, or reuse its audio.",
         "WAV metadata and data_base64.",
-        "One-based slide number. Completed audio remains readable after partial failure. AI-generated speech is not automatically verified for fidelity.",
+        "Supply a one-based slide number for presentation narration, or panel_id (and no slide) for storyboard narration. Panel results include the clip's position, stable ID, exact source revision/hash and direction. Completed audio remains readable after partial failure. AI-generated speech is not automatically verified for fidelity.",
     ),
     "export_video": (
         "Deliver static slides as silent or narrated video, or a post-production package.",
@@ -357,6 +359,8 @@ GUIDANCE = {
 
 
 FIELD_HELP = {
+    "source": "Speech source: presentation (default, notes/script) or storyboard_panels (exact retained panel narration; no notes/script_id)",
+    "panel_id": "Stable panel ID from storyboard narration; mutually exclusive with slide",
     "view_id": "Shared review identity; default shared",
     "expected_version": "Exact version from get-review-view; stale changes conflict",
     "comparison_revision": "Exact comparison revision, or empty string to clear",
@@ -433,6 +437,8 @@ def example(name):
         data["grant"] = {"max_requests": 12, "max_characters": 24000, "timeout_seconds": 300}
     if name == "configure_narration":
         data["provider"] = "openai"
+    if name == "get_narration_audio":
+        data["slide"] = 1
     if name == "export_video":
         data["slide_seconds"] = [10]
         data["output_path"] = "/tmp/stories-brief.mp4"

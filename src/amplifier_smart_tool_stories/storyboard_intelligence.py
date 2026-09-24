@@ -135,7 +135,14 @@ async def compose(story, operation, ask, calls):
                         )
                         review = record(candidate["html"], rendered, verdict, calls[-1])
                     except StoriesError as exc:
-                        if exc.code in {"cancelled", "execution_timeout", "execution_limit"}:
+                        if exc.code in {
+                            "cancelled",
+                            "execution_timeout",
+                            "execution_limit",
+                            "markup_resource_limit",
+                            "render_resource_limit",
+                            "render_timeout",
+                        }:
                             raise
                         review = {"passed": False, "error": exc.public()["error"]}
                     reviews.append(review)

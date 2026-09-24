@@ -10,6 +10,20 @@ from collections import Counter
 from contextlib import redirect_stdout
 
 from .artifacts import parse_html, preview
+from .errors import StoriesError
+
+MAX_STORYBOARD_RENDER_BYTES = 64 * 1024 * 1024
+MAX_RENDER_INPUT_BYTES = 300_000_000
+
+
+def check_storyboard_render_bytes(size):
+    if size > MAX_STORYBOARD_RENDER_BYTES:
+        raise StoriesError(
+            "render_resource_limit",
+            "Storyboard review exceeds the 64 MiB combined PDF/JPEG output budget.",
+            "Use retained structured HTML/ZIP review, or explicitly reduce media bytes. "
+            "No panels were truncated or merged; this is not a panel-count limit.",
+        )
 
 
 def render(html, include_pdf=False, media=None):
@@ -37,6 +51,7 @@ def render(html, include_pdf=False, media=None):
     clean = str(soup)
     slides = soup.select(".slide")
     document = bool(soup.select_one("article.stories-document"))
+    storyboard = bool(soup.select_one("article.stories-storyboard"))
     if len(slides) > 12:
         raise ValueError("Rendered review supports at most 12 slides.")
     # Remove source styles from the expected text, not from the rendered document.
@@ -70,7 +85,9 @@ def render(html, include_pdf=False, media=None):
     doc = HTML(
         string=clean, url_fetcher=NoFetch(allowed_protocols=()), media_type="print" if document else "screen"
     ).render(stylesheets=[] if document else [css])
-    if len(doc.pages) > 12:
+    # Storyboard length follows content, not a page/panel quota. Preserve the
+    # unrelated document/deck budget; storyboard work is byte/time bounded.
+    if not storyboard and len(doc.pages) > 12:
         raise ValueError("Rendered review exceeds 12 pages; shorten the story.")
     findings, rendered = [], []
     for i, page in enumerate(doc.pages):
@@ -102,25 +119,40 @@ def render(html, include_pdf=False, media=None):
     if missing:
         findings.append("Text missing from rendered layout: " + ", ".join(list(missing)[:15]))
     pdf_bytes = doc.write_pdf()
+    render_bytes = len(pdf_bytes)
+    if storyboard:
+        check_storyboard_render_bytes(render_bytes)
+    del doc
     pdf = pdfium.PdfDocument(pdf_bytes)
     images = []
-    for page in pdf:
-        bitmap = page.render(scale=1)
-        output = io.BytesIO()
-        bitmap.to_pil().convert("RGB").save(
-            output, format="JPEG", quality=40 if document else 45, optimize=True
-        )
-        png = output.getvalue()
-        images.append(
-            {
-                "sha256": hashlib.sha256(png).hexdigest(),
-                "data": base64.b64encode(png).decode(),
-                "media_type": "image/jpeg",
-            }
-        )
-        bitmap.close()
-        page.close()
-    pdf.close()
+    page_count = len(pdf)
+    try:
+        # Rasterize one page at a time at the existing scale, releasing each
+        # bitmap immediately. Never keep an unbounded set of decoded pages.
+        for page in pdf:
+            try:
+                bitmap = page.render(scale=1)
+                try:
+                    output = io.BytesIO()
+                    with bitmap.to_pil().convert("RGB") as image:
+                        image.save(output, format="JPEG", quality=40 if document else 45, optimize=True)
+                    encoded = output.getvalue()
+                finally:
+                    bitmap.close()
+                render_bytes += len(encoded)
+                if storyboard:
+                    check_storyboard_render_bytes(render_bytes)
+                images.append(
+                    {
+                        "sha256": hashlib.sha256(encoded).hexdigest(),
+                        "data": base64.b64encode(encoded).decode(),
+                        "media_type": "image/jpeg",
+                    }
+                )
+            finally:
+                page.close()
+    finally:
+        pdf.close()
     return {
         "images": images,
         **({"pdf": base64.b64encode(pdf_bytes).decode()} if include_pdf else {}),
@@ -128,7 +160,7 @@ def render(html, include_pdf=False, media=None):
         if document
         else "WeasyPrint static 1280x720 / PDFium",
         "findings": list(dict.fromkeys(findings))[:30],
-        "page_count": len(doc.pages),
+        "page_count": page_count,
         "rendered_text": " ".join(rendered),
         "expected_text": expected,
     }
@@ -139,11 +171,22 @@ if __name__ == "__main__":
         import resource
 
         resource.setrlimit(resource.RLIMIT_CPU, (35, 35))
-        # JSON escaping can expand a valid 2 MB artifact by up to six times.
-        value = json.loads(sys.stdin.read(300_000_000))
+        # JSON escaping and attached image bytes have a separate IPC budget.
+        raw = sys.stdin.buffer.read(MAX_RENDER_INPUT_BYTES + 1)
+        if len(raw) > MAX_RENDER_INPUT_BYTES:
+            raise StoriesError(
+                "render_resource_limit",
+                "Static render input exceeds the 300 MB JSON payload budget.",
+                "Use structured HTML/ZIP review or explicitly reduce attached media bytes; "
+                "do not truncate or merge panels to satisfy a count quota.",
+            )
+        value = json.loads(raw)
         with redirect_stdout(io.StringIO()):
             result = render(value["html"], value.get("include_pdf", False), value.get("media"))
         print(json.dumps(result))
+    except StoriesError as exc:
+        print(json.dumps(exc.public()))
+        sys.exit(1)
     except Exception as exc:
         print(json.dumps({"error": f"Static rendering failed ({type(exc).__name__}): {str(exc)[:300]}"}))
         sys.exit(1)

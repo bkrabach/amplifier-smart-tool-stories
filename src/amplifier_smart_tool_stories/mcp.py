@@ -76,6 +76,7 @@ def create_server(client):
                 "script_id",
                 "base_script_id",
                 "narration_id",
+                "panel_id",
                 "view_id",
             )
         },
@@ -100,6 +101,7 @@ def create_server(client):
         "panel_open": Annotated[bool, Field(strict=True)],
         "after": integer,
         "slide": Annotated[int, Field(ge=1, strict=True)],
+        "source": Literal["presentation", "storyboard_panels"],
         "kind": Literal["presentation", "document"],
         "fidelity": Literal["outline", "mixed", "illustrated"],
         **{
@@ -193,7 +195,10 @@ def create_server(client):
             if name == "get_media":
                 uri = f"stories://media/{story_id}/{arguments['revision_id']}/{arguments['asset_id']}/0"
             elif name == "get_narration_audio":
-                uri = f"stories://audio/{story_id}/{arguments['narration_id']}/{arguments['slide']}/0"
+                if arguments.get("panel_id") is not None:
+                    uri = f"stories://panel-audio/{story_id}/{arguments['narration_id']}/{arguments['panel_id']}/0"
+                else:
+                    uri = f"stories://audio/{story_id}/{arguments['narration_id']}/{arguments['slide']}/0"
             else:
                 identity = hashlib.sha256(data).hexdigest()
                 with export_lock:
@@ -332,6 +337,18 @@ def create_server(client):
         return chunk(
             f"stories://audio/{story_id}/{narration_id}/{slide}/{offset}",
             client.get_narration_audio(story_id, narration_id, slide),
+            offset,
+        )
+
+    @server.resource(
+        "stories://panel-audio/{story_id}/{narration_id}/{panel_id}/{offset}",
+        mime_type="application/octet-stream",
+        description="One chunk of retained storyboard narration by stable panel identity.",
+    )
+    def panel_audio(story_id: str, narration_id: str, panel_id: str, offset: int) -> bytes:
+        return chunk(
+            f"stories://panel-audio/{story_id}/{narration_id}/{panel_id}/{offset}",
+            client.get_narration_audio(story_id, narration_id, panel_id=panel_id),
             offset,
         )
 

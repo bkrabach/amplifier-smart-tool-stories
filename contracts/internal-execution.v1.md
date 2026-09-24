@@ -101,7 +101,7 @@ alternative directions and structured visual sequences.
    valid authority before new spending; a checkpoint is not permission to restart.
    Alternative generation, image generation, speech synthesis, review and repairs
    share the authorized operation allowance. Independent candidates or per-slide
-   synthesis calls cannot multiply that allowance. Completed slide audio remains
+   or per-panel synthesis calls cannot multiply that allowance. Completed clip audio remains
    reusable after partial failure. An uncertain synthesis response is reported as
    uncertain; retries cannot silently repeat potentially billable synthesis.
 9. **Resources and publication remain controlled.** Imports and deterministic paths

@@ -349,13 +349,66 @@ mandatory technical-demo or marketing mode. Sources may be empty for creative wo
 Generation uses the configured provider, a shared deadline, and at most 12 model
 calls including evidence planning, candidate review and one repair per candidate.
 
-A storyboard has `name`, `approach`, `tradeoff` and 1–8 `panels`. Every panel supplies
+A storyboard has `name`, `approach`, `tradeoff` and at least one panel. There is no
+fixed panel-count cap: the content determines how many panels are needed. Every panel supplies
 `id`, `title`, `action`, `visual`, `asset_id`, `narration`, `notes`, `evidence_ids`.
 Optional text is an empty string, unused citations an empty list. `asset_id` refers
 to a retained still image; `visual` alone describes a planned visual. `outline` and
 `mixed` permit missing images; `illustrated` requires an image on every panel.
 This operation does not generate new images. Use explicit fictional labeling and
 supply evidence for factual claims.
+
+Byte, time, model and speech budgets are execution limits, not a panel quota or
+permission to omit or merge scenes. Markup parsing is bounded to 32 MiB. Static
+storyboard review rasterizes pages individually at the existing scale, with no
+page-count cap: 35 worker CPU seconds, at most 40 wall seconds (or remaining
+operation allowance), 300 MB JSON input and 64 MiB combined PDF/JPEG output.
+Resource exhaustion fails explicitly without returning truncated review or
+automatically rewriting the sequence to fit. Use retained structured HTML/ZIP
+review, or explicitly reduce media bytes where appropriate. Model output/context
+allowances remain finite and provider-dependent. This is not an unlimited-capacity
+promise. Document and presentation page budgets are unchanged.
+
+Markup beyond the parsing budget returns `markup_resource_limit`, not
+`invalid_input` or a repairable quality finding. A generated candidate remains
+intact in `result.failures` with its full structured sequence and resource cause;
+no model repair is spent to reduce it. Retain that source and choose a workflow
+with sufficient byte capacity. HTML/ZIP paths using the same parser cannot
+bypass this budget.
+
+For one speech clip per panel, configure narration as below, then call the shared
+speech operation with an explicit source:
+
+```sh
+stories --store /path/to/store --model-env --execution background generate-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","source":"storyboard_panels","grant":{"max_requests":70,"max_characters":84000,"timeout_seconds":300},"request_id":"panel-speech-1"}'
+stories --store /path/to/store get-narration --input '{"story_id":"STORY_ID","narration_id":"NARRATION_ID"}'
+stories --store /path/to/store get-narration-audio --input '{"story_id":"STORY_ID","narration_id":"NARRATION_ID","panel_id":"arrival"}'
+```
+
+`source="storyboard_panels"` speaks each retained panel's exact `narration` text.
+Every panel must have nonempty text; validation identifies missing panel IDs before
+spending. No silent skips, action/production-note fallback, `notes` override,
+`script_id`, or storyboard-to-deck conversion. Revise the storyboard to edit speech.
+The default `source="presentation"` keeps the existing presentation workflow.
+
+The narration record retains `panel_ids` in source order, direction, revision ID
+and source hash. Clips identify stable `panel_id`, one-based `position`, audio
+identity/hash, sample count and measured duration. Get WAV metadata/base64 by
+`panel_id`, never slide number. Partial failure retains completed clips;
+`panel_errors` identify failed panel IDs/positions, and progress uses
+`completed_panels`/`total_panels`. Reordering preserves panel IDs while rebuilding
+the ordered mapping for the new revision. Unchanged text/settings reuse exact
+cached bytes, including across panels; changed text/settings require fresh audio.
+
+The same saved settings, grants, concurrency, exact-retry and cancellation rules
+apply as for presentation speech. Defaults are not expanded automatically: beyond
+12 distinct uncached texts, explicitly grant more requests and enough input
+characters. The example grants 70 requests and 84000 characters, not a panel cap.
+A single speech operation permits at most 100 uncached requests, 200000 input
+characters and 900 seconds; cache reuse and duplicate text do not add requests.
+An insufficient grant fails before spending, never drops panels. Storyboard HTML/ZIP exports do not
+include synthesized audio; retrieve clips separately for production. Script
+preparation, dashboard speech controls and video export remain presentation-only.
 
 `create-storyboard` imports structure. `revise-storyboard` applies an explicit edit,
 optionally attaches different assets or creates `new_direction=true`. Panel IDs

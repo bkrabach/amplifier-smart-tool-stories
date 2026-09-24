@@ -1,4 +1,4 @@
-"""Direct, explicitly authorized speech APIs and retained per-slide narration."""
+"""Direct, explicitly authorized speech APIs and retained slide or panel narration."""
 
 import asyncio
 import base64
@@ -30,7 +30,7 @@ def credential(provider):
 def wav(pcm):
     require(
         isinstance(pcm, bytes) and 0 < len(pcm) <= 64 * 1024 * 1024 and len(pcm) % 2 == 0,
-        "Speech must return nonempty 24 kHz mono 16-bit PCM within the 64 MiB per-slide budget.",
+        "Speech must return nonempty 24 kHz mono 16-bit PCM within the 64 MiB per-clip budget.",
         "invalid_audio",
     )
     out = io.BytesIO()
@@ -175,11 +175,30 @@ class NarrationLibrary:
         retry_uncertain=False,
         script_id=None,
         concurrency=3,
+        source="presentation",
     ):
-        """Queue bounded per-slide synthesis from retained notes or an explicitly supplied adaptation."""
+        """Queue bounded speech from presentation notes/scripts or exact storyboard panel narration."""
         rev = self.get_revision(story_id, revision_id)
-        require(rev.get("kind") != "document", "Narration requires a presentation.")
-        slides = parse_html(rev["html"]).select(".slide")
+        require(
+            isinstance(source, str) and source in {"presentation", "storyboard_panels"},
+            "Choose presentation or storyboard_panels source.",
+        )
+        panels = None
+        if source == "storyboard_panels":
+            require(rev.get("kind") == "storyboard", "storyboard_panels source requires a storyboard.")
+            require(
+                notes is None and script_id is None,
+                "Panel narration uses retained panel text; do not supply notes or script_id.",
+            )
+            panels = rev["storyboard"]["panels"]
+            missing = [p["id"] for p in panels if not p["narration"].strip()]
+            require(not missing, "Provide nonempty narration for every panel; missing: " + ", ".join(missing))
+        else:
+            require(
+                rev.get("kind") not in {"document", "storyboard"},
+                "Presentation narration requires a presentation; use source=storyboard_panels for storyboards.",
+            )
+        slides = [] if panels is not None else parse_html(rev["html"]).select(".slide")
         script = None
         if script_id:
             require(notes is None, "Supply script_id or notes, not both.")
@@ -191,15 +210,17 @@ class NarrationLibrary:
             )
             notes = [s["text"] for s in script["slides"]]
         supplied = notes is not None
-        if notes is None:
+        if panels is not None:
+            notes = [p["narration"] for p in panels]
+        elif notes is None:
             notes = [
                 "\n".join(n.get_text(" ", strip=True) for n in s.select(".notes,[data-speaker-notes]"))
                 for s in slides
             ]
         require(
             isinstance(notes, list)
-            and len(notes) == len(slides)
-            and len(slides) > 0
+            and len(notes) == len(panels if panels is not None else slides)
+            and len(notes) > 0
             and all(isinstance(n, str) and n.strip() and len(n) <= 4000 for n in notes),
             "Provide nonempty speaker notes for each slide (maximum 4000 characters each); notes are never invented during synthesis.",
         )
@@ -250,6 +271,13 @@ class NarrationLibrary:
                 "clips": [],
                 "state": "queued",
             }
+            if panels is not None:
+                nar.update(
+                    source=source,
+                    notes_origin="storyboard_panels",
+                    panel_ids=[p["id"] for p in panels],
+                    direction_id=rev["direction_id"],
+                )
             op = {
                 "id": identity("op"),
                 "story_id": story_id,
@@ -281,7 +309,8 @@ class NarrationLibrary:
             "generate_narration",
             [story_id, revision_id, grant, notes, supplied, retry_uncertain]
             + ([script_id] if script_id else [])
-            + ([{"concurrency": concurrency}] if concurrency != 3 else []),
+            + ([{"concurrency": concurrency}] if concurrency != 3 else [])
+            + ([{"source": source}] if source != "presentation" else []),
             action,
         )
 
@@ -320,16 +349,39 @@ class NarrationLibrary:
             nar["state"] = self.get_operation(nar["operation_id"])["state"]
         return nar
 
-    def get_narration_audio(self, story_id, narration_id, slide):
-        """Read a completed slide's retained WAV for listening or reuse, including after partial failure."""
+    def get_narration_audio(self, story_id, narration_id, slide=None, panel_id=None):
+        """Read a completed WAV by slide number or stable panel ID, including after partial failure."""
         nar = self.get_narration(story_id, narration_id)
-        require(type(slide) is int, "Slide must be an integer.")
-        clip = next((c for c in nar["clips"] if c["slide"] == slide), None)
-        require(clip, "Slide audio is not available.")
+        if nar.get("source") == "storyboard_panels":
+            require(
+                slide is None and isinstance(panel_id, str) and panel_id in nar["panel_ids"],
+                "Supply a retained panel_id, not a slide number, for storyboard narration.",
+            )
+            clip = next((c for c in nar["clips"] if c["panel_id"] == panel_id), None)
+        else:
+            require(type(slide) is int and panel_id is None, "Supply an integer slide number, not panel_id.")
+            clip = next((c for c in nar["clips"] if c["slide"] == slide), None)
+        require(
+            clip, "Panel audio is not available." if panel_id is not None else "Slide audio is not available."
+        )
         with self.store.transaction() as db:
             pair = audio_record(db, clip["audio_id"])
         require(pair, "Retained audio is missing.", "missing_asset")
-        return {"audio": pair[0], "mime_type": "audio/wav", "data_base64": base64.b64encode(pair[1]).decode()}
+        result = {
+            "audio": pair[0],
+            "mime_type": "audio/wav",
+            "data_base64": base64.b64encode(pair[1]).decode(),
+        }
+        if panel_id is not None:
+            result.update(
+                clip=clip,
+                source=nar["source"],
+                story_id=story_id,
+                revision_id=nar["revision_id"],
+                source_sha256=nar["source_sha256"],
+                direction_id=nar["direction_id"],
+            )
+        return result
 
 
 def run_narration(api, operation_id):
@@ -348,6 +400,10 @@ def run_narration(api, operation_id):
         nar = api.store.get(db, "narrations", op["narration_id"])
         nar["state"] = "running"
         api.store.put(db, "narrations", nar)
+
+    panel_source = nar.get("source") == "storyboard_panels"
+    position_key = "position" if panel_source else "slide"
+    unit = "panels" if panel_source else "slides"
 
     def check():
         current = api.get_operation(operation_id)
@@ -422,7 +478,9 @@ def run_narration(api, operation_id):
                     w.getframerate() == 24000
                     and w.getnchannels() == 1
                     and w.getsampwidth() == 2
-                    and w.getnframes() > 0,
+                    and w.getnframes() > 0
+                    and len(data) <= 64 * 1024 * 1024 + 44
+                    and len(w.readframes(w.getnframes())) == w.getnframes() * 2,
                     "Speech WAV format is invalid.",
                     "invalid_audio",
                 )
@@ -452,7 +510,8 @@ def run_narration(api, operation_id):
             require(current["state"] == "running", "Narration cancelled.", "cancelled")
             nar["clips"].extend(
                 {
-                    "slide": i + 1,
+                    position_key: i + 1,
+                    **({"panel_id": nar["panel_ids"][i]} if panel_source else {}),
                     "audio_id": key,
                     "sha256": cached[0]["sha256"],
                     "samples": cached[0]["samples"],
@@ -460,9 +519,9 @@ def run_narration(api, operation_id):
                 }
                 for i in indices
             )
-            nar["clips"].sort(key=lambda c: c["slide"])
+            nar["clips"].sort(key=lambda c: c[position_key])
             api.store.put(db, "narrations", nar)
-            current["progress"] = {"completed_slides": len(nar["clips"]), "total_slides": len(nar["notes"])}
+            current["progress"] = {f"completed_{unit}": len(nar["clips"]), f"total_{unit}": len(nar["notes"])}
             api.store.put(db, "operations", current)
 
     async def work():
@@ -479,7 +538,15 @@ def run_narration(api, operation_id):
                     return await one(text, indices)
                 except Exception as exc:
                     # Keep diagnostic categories, never provider response text or credentials.
-                    failure = {"slides": [i + 1 for i in indices], "type": type(exc).__name__}
+                    failure = (
+                        {
+                            "panel_ids": [nar["panel_ids"][i] for i in indices],
+                            "positions": [i + 1 for i in indices],
+                        }
+                        if panel_source
+                        else {"slides": [i + 1 for i in indices]}
+                    )
+                    failure["type"] = type(exc).__name__
                     status = getattr(exc, "status_code", getattr(exc, "code", None))
                     if type(status) is int and 100 <= status <= 599:
                         failure["http_status"] = status
@@ -487,7 +554,9 @@ def run_narration(api, operation_id):
                         failure["code"] = exc.code
                     with api.store.transaction() as db:
                         current = api.store.get(db, "operations", operation_id)
-                        current.setdefault("slide_errors", []).append(failure)
+                        current.setdefault("panel_errors" if panel_source else "slide_errors", []).append(
+                            failure
+                        )
                         api.store.put(db, "operations", current)
                         if status == 429:
                             # A rate/quota rejection is known not to have produced audio.

@@ -26,7 +26,14 @@ structures appropriate to the purpose. These are possibilities, not mandatory mo
 Make each panel serve a clear audience takeaway; guide attention and coordinate words
 with the intended visual. Avoid needless detail, unexplained jumps and unsupported
 causality. Timing and camera notes are optional; untimed comics/outlines are valid.
-Keep panel copy concise enough for a readable review sheet. Use 1–8 panels per direction.
+Keep panel copy concise enough for a readable review sheet. Use as many panels as
+the content and purpose need, with at least one panel and no fixed panel-count cap.
+Preserve requested beats and panel counts; do not truncate, omit or merge scenes
+to fit an invented quota. Byte, time, model and speech allowances are separate
+execution constraints: disclose an unmet resource need instead of silently changing
+the sequence. When speech is requested, put exact
+spoken words in each panel's narration, not action or production notes. Storyboard
+generation does not synthesize audio; empty narration remains valid for untimed outlines.
 The result is a storyboard plan, not a finished video, generated illustration or proof
 of audience comprehension. Surface missing assets and other production needs honestly.
 

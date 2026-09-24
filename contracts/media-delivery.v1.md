@@ -104,6 +104,26 @@ narration, clip playback or presentation-to-video production.
 
 ## Presentation-to-video export
 
+### Storyboard speech uses the shared synthesis boundary
+
+An explicit storyboard-panel speech request reads the selected revision's exact
+panel narration, not HTML sections or production notes. Each panel must have
+nonempty narration before any request is admitted. Retain ordered stable panel IDs,
+source direction/revision/hash, exact input text and effective speech settings;
+each completed clip identifies its panel, position, audio hash and measured
+duration. Identical text/settings may reuse exact audio without losing the separate
+panel mappings. Reordering or editing creates a new revision-bound mapping;
+historical narration remains unchanged.
+
+The configuration, spending, uncertainty, partial-completion and cancellation
+obligations below also govern panel speech. Failed panels are identified, completed
+clips remain readable, and an exact retry cannot spend again. No storyboard-to-deck
+conversion, automatic synthesis on export, or finished-video promise is implied.
+Storyboard HTML/ZIP exports remain structured plans plus visual assets; synthesized
+panel clips are retrieved separately by stable panel ID.
+
+### Presentation delivery
+
 This is an optional export of a selected presentation revision, not a requirement
 for making or reviewing decks and not a general-purpose video editor.
 
@@ -190,6 +210,8 @@ for making or reviewing decks and not a general-purpose video editor.
 
 ## Changelog
 
+- **2026-09-23** — Added explicit storyboard-panel speech with revision-bound
+  per-panel provenance, shared speech settings and execution semantics.
 - **2026-09-18** — Added shared image generation across formats and structured
   storyboard delivery, preserving visual provenance and exact reviewed content.
 - **2026-09-18** — Defined supplied media, portable HTML delivery and notes-aware

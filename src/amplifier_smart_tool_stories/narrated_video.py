@@ -21,6 +21,11 @@ from .video import encode
 def export(
     api, revision, media, narration, output_path, slide_seconds, pause_seconds, delivery, timeout_seconds
 ):
+    require(
+        narration.get("source", "presentation") == "presentation",
+        "Video export requires presentation narration; retrieve storyboard clips separately by panel_id.",
+        "unsupported_format",
+    )
     require(delivery in {"embedded", "separate"}, "Choose embedded MP4 or separate ZIP delivery.")
     require(
         narration["state"] == "succeeded", "Narration must complete before export.", "narration_incomplete"

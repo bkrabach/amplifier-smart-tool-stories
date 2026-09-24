@@ -371,7 +371,24 @@ The structured `storyboard` used by `create-storyboard` and `revise-storyboard` 
 {"name":"Follow the request","approach":"A concrete journey","tradeoff":"Less system detail","panels":[{"id":"arrival","title":"A request arrives","action":"A fictional team receives a request.","visual":"Sketch of a request card","asset_id":"","narration":"","notes":"","evidence_ids":[]}]}
 ```
 
-There are 1–8 panels per direction. Keep IDs stable when reordering or revising.
+The content dictates panel count, with at least one panel and no fixed maximum.
+Keep IDs stable when reordering or revising. Resource limits are separate from
+content: no truncation or scene merging to satisfy a panel quota.
+
+Markup parsing has a 32 MiB budget. Static storyboard review rasterizes one page at
+a time at the existing scale, without a page-count cap. It retains the 35-second
+worker CPU and at-most-40-second wall-time limits (also bounded by the remaining
+operation allowance), with 300 MB of JSON input and 64 MiB of combined PDF/JPEG
+output. Resource exhaustion fails explicitly; it does not report partial sheets
+as a complete review or spend on rewriting the sequence to fit. Use retained
+structured HTML/ZIP review, or explicitly reduce media bytes as appropriate.
+Model output/context and speech grants remain separate bounded resources, not a
+promise of unlimited capacity. Document/presentation page budgets are unchanged.
+Exceeding the markup parsing budget returns `markup_resource_limit`, distinct
+from invalid HTML. Generated candidates remain intact in `result.failures` with
+their resource cause; no model repair is spent to shrink them. Retain that complete
+structured source for a workflow with sufficient byte capacity—HTML/ZIP paths
+using the same parser cannot bypass its byte budget.
 `create-storyboard` imports this structure without a model. `revise-storyboard`
 retains explicit edits and optional replacement `asset_ids`; `new_direction=true`
 creates an explicitly requested alternative from the identified base. Ordinary edits
@@ -473,6 +490,41 @@ notes adaptation, generation/cancellation, audio listening and two export modes.
 Its generation grant is 12 requests / 48000 characters / 300 seconds. The viewer
 needs provider-use authority for uncached speech. Exports require no new API calls.
 
+
+## Storyboard-panel speech
+
+Use the same `generate-narration` operation with `source: "storyboard_panels"`.
+It reads each panel's exact `narration` text from the identified revision, not
+rendered sections, action, production notes or an adapted presentation. Every
+panel must have nonempty narration: missing text is reported by panel ID before
+spending. Do not supply `notes` or `script_id`; revise the storyboard to change
+what is spoken. Default `source: "presentation"` preserves existing slide behavior.
+
+The retained record identifies source revision/hash, direction and ordered
+`panel_ids`. Each clip has `panel_id`, one-based `position`, audio identity/hash,
+sample count and measured duration. Retrieve WAV bytes with `get-narration-audio`
+using `panel_id` instead of `slide`. Progress uses `completed_panels`/`total_panels`;
+`panel_errors` identify incomplete panels. Identical text/settings share cached
+audio, but every panel retains its own clip mapping, including after reordering.
+Saved speech settings, bounded grants, exact retries, uncertainty and cancellation
+use the same speech pipeline. For more than 12 distinct uncached texts, explicitly
+raise `grant.max_requests`; larger text totals may also require raising
+`max_characters` above the unchanged 24000 default. Grants bound uncached requests,
+input characters and time, not storyboard length: a request that exceeds its
+allowance fails before spending, never silently omits panels. A single speech
+operation supports grants of at most 100 uncached requests, 200000 characters and
+900 seconds; cached or duplicate text does not consume additional requests.
+Those are speech execution limits, not a panel-count ceiling or automatic authority.
+
+```sh
+stories --store /path/to/store --model-env --execution background generate-narration --input '{"story_id":"STORY_ID","revision_id":"REVISION_ID","source":"storyboard_panels","grant":{"max_requests":70,"max_characters":84000,"timeout_seconds":300},"request_id":"panel-speech-1"}'
+stories --store /path/to/store get-narration-audio --input '{"story_id":"STORY_ID","narration_id":"NARRATION_ID","panel_id":"arrival"}'
+```
+
+This is library/CLI/MCP speech, not a storyboard-to-deck conversion. Storyboard
+HTML/ZIP exports still deliver the structured plan and visuals, not synthesized
+audio. Retrieve clips separately for production. Presentation-only script writing,
+dashboard speech controls and video export do not become storyboard capabilities.
 
 ## Preparing narration independently of speech
 

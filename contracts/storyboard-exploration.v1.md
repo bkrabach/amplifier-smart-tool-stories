@@ -130,8 +130,12 @@ Proposed behavioral checks, not claims of implementation or current conformance:
 The library and CLI provide structured storyboard import, bounded model generation,
 comment-driven refinement, explicit direction selection, brief corrections and
 read-only comparison. Ordinary generation requests one direction; `explore=true`
-requests two. Each direction supports one to eight panels, with optional retained
-still images. A generated comparison shares a maximum of twelve model calls,
+requests two. Each direction has at least one panel, with optional retained
+still images. Content determines the panel count; there is no fixed maximum.
+Separate byte/time/model/speech budgets must not become permission to truncate,
+omit or merge scenes to fit a quota. Resource needs beyond the current allowance
+are reported explicitly, not disguised as complete work. A generated comparison
+shares a maximum of twelve model calls,
 including evidence extraction, candidate review, repairs and a diversity check.
 Completed reviewed candidates can be retained with a `partial` operation result
 when another candidate fails; cancellation and hard deadlines still fence commits.
@@ -143,8 +147,25 @@ multi-base synthesis and finished video are not implemented by this slice.
 Scripted-provider tests establish orchestration behavior; they do not establish
 live-model quality or audience comprehension.
 
+Optional panel narration uses the shared speech capability with an explicit
+storyboard source. It speaks exact retained panel narration, one clip mapping per
+stable panel ID in revision order; missing text fails before spending rather than
+omitting a panel. It does not convert the board into a presentation. Shared speech
+settings, grants, cache, partial failures, cancellation and retry obligations apply.
+Audio retrieval is separate from storyboard HTML/ZIP delivery and finished video.
+Static review rasterizes individual pages at the existing scale without a page-count
+ceiling, bounded instead by parsing, payload/output bytes and CPU/wall time.
+Resource exhaustion is actionable, never a truncated success or an automatic
+rewrite to reduce panel count. Existing boards and exact retries remain valid.
+Markup parsing budget exhaustion is a distinct resource failure, not an invalid
+content or quality defect: it preserves the complete failed candidate and original
+cause without spending a model repair to shorten or merge its sequence.
+
 ## Changelog
 
+- **2026-09-23** — Removed the fixed panel-count ceiling in favor of content-driven
+  sequences with explicit resource limits; added panel-native speech through the
+  shared narration capability.
 - **2026-09-18** — First behavioral draft for general-purpose storyboard exploration,
   progressive visual detail, meaningful alternatives and retained structured sequences.
 

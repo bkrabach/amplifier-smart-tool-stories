@@ -29,14 +29,32 @@ async def render(html, timeout, include_pdf=False, media=None):
         env=env,
     )
     try:
-        stdout, _ = await asyncio.wait_for(
-            process.communicate(
-                json.dumps({"html": html, "include_pdf": include_pdf, "media": media or {}}).encode()
-            ),
-            min(40, timeout),
-        )
+        try:
+            stdout, _ = await asyncio.wait_for(
+                process.communicate(
+                    json.dumps({"html": html, "include_pdf": include_pdf, "media": media or {}}).encode()
+                ),
+                min(40, timeout),
+            )
+        except TimeoutError:
+            raise StoriesError(
+                "render_timeout",
+                "Static review exceeded its wall-time budget (at most 40 seconds or the remaining allowance).",
+                "Use retained structured HTML/ZIP review or retry with sufficient remaining time; "
+                "no panels were truncated or merged. This is not a panel-count limit.",
+            ) from None
+        if not stdout:
+            raise StoriesError(
+                "render_resource_limit",
+                "Static renderer exited without a result; it may have exhausted CPU or memory.",
+                "Check native rendering dependencies and available resources; review retained HTML/ZIP. "
+                "The worker has a 35-second CPU budget; no incomplete rendering is reported as success.",
+            )
         result = json.loads(stdout)
         if process.returncode or "error" in result:
+            if isinstance(result.get("error"), dict):
+                error = result["error"]
+                raise StoriesError(error["code"], error["message"], error["remedy"])
             raise StoriesError(
                 "render_failed",
                 result.get("error", "Static rendering failed."),

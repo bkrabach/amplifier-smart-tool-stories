@@ -80,7 +80,7 @@ def test_typed_grants_resources_and_provider_free_status(tmp_path):
             assert resource.mime_type == APP_MIME_TYPE and "<script src=" not in resource.text
             assert resource.meta["ui"]["csp"]["connectDomains"] == []
             assert 'sandbox="allow-scripts"' in resource.text
-            assert len((await client.list_resource_templates()).resource_templates) == 3
+            assert len((await client.list_resource_templates()).resource_templates) == 4
 
     anyio.run(run)
 

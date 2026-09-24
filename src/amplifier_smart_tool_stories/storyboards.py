@@ -28,7 +28,7 @@ BOARD = obj(
         "name": TEXT,
         "approach": TEXT,
         "tradeoff": TEXT,
-        "panels": {"type": "array", "items": PANEL, "minItems": 1, "maxItems": 8},
+        "panels": {"type": "array", "items": PANEL, "minItems": 1},
     }
 )
 
@@ -74,7 +74,7 @@ def checked(board, evidence=None, assets=None, fidelity="mixed"):
         text(board[field], field, 500, field != "tradeoff")
     require(fidelity in {"outline", "mixed", "illustrated"}, "Choose outline, mixed or illustrated fidelity.")
     panels = board["panels"]
-    require(isinstance(panels, list) and 1 <= len(panels) <= 8, "Supply 1–8 panels per direction.")
+    require(isinstance(panels, list) and bool(panels), "Supply at least one panel per direction.")
     ids = set()
     refs = None if evidence is None else {e["id"] for e in evidence}
     media = None if assets is None else {a["id"]: a for a in assets}
