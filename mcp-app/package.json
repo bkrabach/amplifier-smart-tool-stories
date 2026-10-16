@@ -1,1 +1,1 @@
-{"name":"stories-mcp-app","private":true,"type":"module","scripts":{"build":"node build.mjs"},"dependencies":{"@modelcontextprotocol/ext-apps":"2.0.0"},"devDependencies":{"esbuild":"0.25.12"}}
+{"name":"stories-mcp-app","private":true,"type":"module","scripts":{"build":"node build.mjs","test":"node --test startup.test.mjs"},"dependencies":{"@modelcontextprotocol/ext-apps":"2.0.0"},"devDependencies":{"esbuild":"0.25.12"}}

@@ -588,6 +588,10 @@ is a provisional narration/visual budget, not a promise of produced video durati
 
 Story-scoped results identify one retained dashboard across review methods;
 independent stories remain separate. The optional metadata grants no authority.
+After an initial connection failure, a standard host tool-list notification can
+retry the App's first story read. It does not replay mutations or reset an already
+initialized editor. Hosts retain the code in previously saved HTML until explicitly
+opening a newly served view.
 
 Install `amplifier-smart-tool-stories[mcp]` from this Git repository and run
 `stories-mcp --storage /explicit/store`. Add `--model-env` only with authority to
