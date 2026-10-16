@@ -95,4 +95,11 @@ as independent proof. Keep reports, stores and screenshots in `.work/`. For UI c
 exercise the actual browser flow and verify that material, draft and revision context
 survive. Stop owned trial services when finished.
 
+For MCP App startup changes, run `npm ci --prefix mcp-app`,
+`npm test --prefix mcp-app` and `npm run build --prefix mcp-app`, then the targeted
+`test_startup_recovers_on_host_signal_without_reinitializing_or_replaying` cases
+in `tests/test_mcp_browser.py` with the optional MCP/Playwright dependencies.
+Keep source and packaged `resources/mcp_app.html` together. The unit checks cover
+notification races; the real SDK browser cases cover retained edits and no mutation replay.
+
 Report changes, relevant checks and remaining limits. Commit/push when requested.

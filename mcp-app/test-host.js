@@ -11,7 +11,7 @@ window.mountStories = async (html, result) => {
   const bridge = new AppBridge(
     null,
     { name: "Independent standards host", version: "1.0.0" },
-    { serverTools: {}, serverResources: {}, updateModelContext: {} },
+    { serverTools: {listChanged: true}, serverResources: {}, updateModelContext: {} },
     { hostContext: { theme: "light", displayMode: "inline" } },
   );
   bridge.oncalltool = (args) => window.hostCall(args);

@@ -14,7 +14,10 @@ caller-reported human submission. Without model access, user comments are retain
 awaiting access without consuming a grant or starting work. Acceptance is caller-reported, not authenticated. Media and
 exports use scoped resources/read chunks; export transfer snapshots last until
 this server stops. Story results identify one retained dashboard across review methods;
-independent stories stay separate. Closing a view does not cancel work. No MCP sampling, Tasks,
+independent stories stay separate. Closing a view does not cancel work.
+Initial App story reads can recover on a host tool-list notification; initialized editors
+and uncertain mutations are not restarted. Previously saved HTML keeps its captured code.
+No MCP sampling, Tasks,
 elicitation or caller wake-up is implied. Setup/login/discovery use model_env-gated
 start-provider-job and get-provider-job, with durable exact-retry receipts.
 get-video-export prepares bounded bytes from retained presentation narration only."""

@@ -73,6 +73,13 @@ browser profile. The shared review identity is not an authenticated person.
 The reviewer may select text or an identified element in the preview to target a
 comment. Saved drafts survive reconnects. Incoming changes update shared metadata
 without replacing the viewed revision on content updates or discarding unsaved typing.
+If the first story read fails while the host connection is unavailable, the App
+keeps the error visible and waits for the standard `notifications/tools/list_changed`
+recovery signal. It retries only that initial read, coalescing duplicate signals.
+Successful startup is not repeated, and reconnect never resubmits an uncertain
+mutation or resets an initialized editor. A host without that notification can
+still reconnect and explicitly reload the view. Previously saved HTML retains
+the code captured by its host; installing a new server does not rewrite it.
 `stories_get_review_view` and `stories_update_review_view` share revision focus,
 one-based slide, comparison, selected anchor, review panel, expanded sections and
 export format between agents and people. Read the current version before updating;

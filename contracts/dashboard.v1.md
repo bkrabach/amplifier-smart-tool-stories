@@ -123,6 +123,10 @@ Comparison of storyboard directions follows the
    prevents stale submissions from reviving work, and reports cleanup failures.
    Retained artifacts, accepted feedback and saved drafts survive under the retention
    policy. Reopening restores work without automatically restarting model spending.
+   An MCP App whose first story read failed may retry that read on a standard host
+   recovery notification. Duplicate notifications do not duplicate startup; an
+   initialized editor and uncertain mutation remain untouched. This recovery does
+   not imply that a host replaces the source of a previously saved document.
 10. **Generated content is separate from workspace controls.** The built-in service
     is authenticated and local by default; wider exposure is not implicit. It serves
     authorized artifacts through identified references, not arbitrary filesystem

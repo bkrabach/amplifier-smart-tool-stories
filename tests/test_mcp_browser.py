@@ -21,6 +21,116 @@ from amplifier_smart_tool_stories.mcp import create_server
 ROOT = Path(__file__).parents[1]
 
 
+@pytest.mark.parametrize("signal_during_failed_read", [False, True])
+def test_startup_recovers_on_host_signal_without_reinitializing_or_replaying(
+    tmp_path, signal_during_failed_read
+):
+    """Cold view, real SDK notifications, retained edits and lost mutation ack."""
+    api = Stories(tmp_path / "store")
+    ids = api.create_story(
+        "Recovered story",
+        '<html><body><section class="slide"><p>Kept material</p></section></body></html>',
+        "create",
+    )
+    host = subprocess.run(
+        [
+            str(ROOT / "mcp-app/node_modules/.bin/esbuild"),
+            str(ROOT / "mcp-app/test-host.js"),
+            "--bundle",
+            "--format=iife",
+            "--log-level=error",
+        ],
+        check=True,
+        text=True,
+        capture_output=True,
+    ).stdout
+    html = (ROOT / "src/amplifier_smart_tool_stories/resources/mcp_app.html").read_text()
+
+    async def run():
+        async with Client(create_server(api)) as client, async_playwright() as pw:
+            browser = await pw.chromium.launch()
+            try:
+                page = await browser.new_page(viewport={"width": 1100, "height": 900})
+                await page.add_init_script(
+                    "window.readyCount=0;addEventListener('stories-ready',()=>window.readyCount++)"
+                )
+                entered, release = asyncio.Event(), asyncio.Event()
+                reads, mutations = 0, []
+
+                async def tool(args):
+                    nonlocal reads
+                    if args["name"] == "stories_get_story":
+                        reads += 1
+                        if reads == 1:
+                            entered.set()
+                            if signal_during_failed_read:
+                                await release.wait()
+                            raise RuntimeError("Saved tool connection is offline")
+                    result = (await client.call_tool(args["name"], args.get("arguments", {}))).model_dump(
+                        by_alias=True, exclude_none=True
+                    )
+                    if args["name"] == "stories_add_comment":
+                        mutations.append(args["arguments"])
+                        assert not result.get("isError")
+                        raise RuntimeError("Acknowledgement lost after commit")
+                    return result
+
+                async def read(args):
+                    return (await client.read_resource(args["uri"])).model_dump(
+                        by_alias=True, exclude_none=True
+                    )
+
+                await page.expose_function("hostCall", tool)
+                await page.expose_function("hostRead", read)
+                await page.route(
+                    "https://stories-host.test/**",
+                    lambda route: route.fulfill(
+                        body="<!doctype html><body></body>", content_type="text/html"
+                    ),
+                )
+                await page.goto("https://stories-host.test/")
+                await page.add_script_tag(content=host)
+                initial = await client.call_tool("stories_get_story", {"story_id": ids["story_id"]})
+                await page.evaluate(
+                    "([html,result])=>mountStories(html,result)",
+                    [html, initial.model_dump(by_alias=True, exclude_none=True)],
+                )
+                ui = page.frame_locator("#app")
+                frame = next(f for f in page.frames if f.parent_frame == page.main_frame)
+                await asyncio.wait_for(entered.wait(), 5)
+                if not signal_during_failed_read:
+                    await expect(ui.locator("#error")).to_contain_text("connection is offline")
+                    assert reads == 1
+                await page.evaluate(
+                    "Promise.all([storiesBridge.sendToolListChanged(),storiesBridge.sendToolListChanged()])"
+                )
+                release.set()
+                await expect(ui.locator("#versions")).to_have_value(ids["revision_id"], timeout=15000)
+                await frame.wait_for_function("window.readyCount===1")
+                await expect(ui.locator("#error")).to_be_hidden()
+                await ui.locator("#overall").click()
+                await ui.locator("#comment").fill("One explicit submission")
+                await expect(ui.locator("#saved")).to_have_text("Draft saved")
+                await ui.locator("#send").click()
+                await expect(ui.locator("#error")).to_contain_text("Acknowledgement lost")
+                await ui.locator("#comment").fill("A newer unsent thought")
+                await expect(ui.locator("#saved")).to_have_text("Draft saved")
+                await page.evaluate(
+                    "Promise.all([storiesBridge.sendToolListChanged(),storiesBridge.sendToolListChanged()])"
+                )
+                # A barrier through the same bridge, without forcing a reload.
+                await frame.evaluate(
+                    "window.StoriesTransport.api('get-story',{story_id: window.StoriesReview.story().id})"
+                )
+                await expect(ui.locator("#comment")).to_have_value("A newer unsent thought")
+                assert await frame.evaluate("window.readyCount") == 1
+                assert len(mutations) == 1
+            finally:
+                await browser.close()
+
+    asyncio.run(run())
+
+
 @pytest.mark.parametrize("surface", ["http", "mcp"])
 def test_narration_settings_exact_feedback_and_acknowledgement(tmp_path, surface):
     """Real transports: shared form copy, server rejection, and lost committed ack."""

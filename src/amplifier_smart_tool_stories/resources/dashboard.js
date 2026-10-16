@@ -711,7 +711,10 @@ async function openWorkspace(initial, acceptedAdoption = adoption) {
   window.dispatchEvent(new Event("stories-ready"));
 }
 async function boot() {
-  await openWorkspace(await transport.bootstrap());
+  await openWorkspace(await transport.bootstrap(failure => {
+    if (failure) error(failure);
+    else $("error").hidden = true;
+  }));
   setInterval(async () => {
     if (polling) return;
     polling = true;
